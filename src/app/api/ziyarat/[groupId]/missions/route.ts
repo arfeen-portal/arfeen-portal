@@ -1,0 +1,30 @@
+// app/api/ziyarat/[groupId]/missions/route.ts
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+export async function GET(
+  req: Request,
+  { params }: { params: { groupId: string } }
+) {
+  const supabase = await createClient();
+
+  const { data: pilgrims } = await supabase
+    .from("pilgrim_profiles")
+    .select("id, full_name")
+    .eq("group_trip_id", params.groupId);
+
+  const { data: sites } = await supabase
+    .from("ziyarat_sites")
+    .select("*")
+    .eq("is_active", true);
+
+  const { data: checkins } = await supabase
+    .from("ziyarat_checkins")
+    .select("*");
+
+  return NextResponse.json({
+    pilgrims: pilgrims ?? [],
+    sites: sites ?? [],
+    checkins: checkins ?? [],
+  });
+}

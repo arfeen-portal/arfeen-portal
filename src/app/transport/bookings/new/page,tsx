@@ -1,0 +1,229 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
+
+export default function NewTransportBookingPage() {
+  const router = useRouter();
+  const supabase = createClient();
+
+  const [agents, setAgents] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [batches, setBatches] = useState([]);
+
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  const [form, setForm] = useState({
+    agent_id: '',
+    batch_id: '',
+    pickup_city: '',
+    dropoff_city: '',
+    pickup_datetime: '',
+    vehicle_id: '',
+    pax_count: 1,
+    selling_price: 0,
+    supplier_cost: 0,
+    notes: '',
+  });
+
+  useEffect(() => {
+    const loadOptions = async () => {
+      const [agentsRes, vehiclesRes, batchesRes] = await Promise.all([
+        supabase.from('agents').select('id, name').order('name'),
+        supabase.from('vehicles').select('id, name').order('name'),
+        supabase.from('batches').select('id, name').order('created_at', { ascending: false }),
+      ]);
+
+      if (!agentsRes.error && agentsRes.data) {
+        setAgents(agentsRes.data.map((a) => ({ id: a.id, label: a.name })));
+      }
+      if (!vehiclesRes.error && vehiclesRes.data) {
+        setVehicles(vehiclesRes.data.map((v) => ({ id: v.id, label: v.name })));
+      }
+      if (!batchesRes.error && batchesRes.data) {
+        setBatches(batchesRes.data.map((b) => ({ id: b.id, label: b.name })));
+      }
+    };
+
+    loadOptions();
+  }, [supabase]);
+
+  const updateField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg(null);
+
+    const { error } = await supabase.from('transport_bookings').insert({
+      agent_id: form.agent_id || null,
+      batch_id: form.batch_id || null,
+      pickup_city: form.pickup_city.trim(),
+      dropoff_city: form.dropoff_city.trim(),
+      pickup_datetime: new Date(form.pickup_datetime).toISOString(),
+      vehicle_id: form.vehicle_id || null,
+      pax_count: Number(form.pax_count) || 1,
+      selling_price: Number(form.selling_price) || 0,
+      supplier_cost: Number(form.supplier_cost) || 0,
+      notes: form.notes.trim() || null,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      console.error(error);
+      setErrorMsg(error.message);
+      return;
+    }
+
+    router.push('/transport/bookings');
+  };
+
+  return (
+    <div className="p-6 max-w-3xl space-y-4">
+      <h1 className="text-2xl font-semibold">New Transport Booking</h1>
+
+      {errorMsg && <div className="text-red-600 text-sm">{errorMsg}</div>}
+
+      <form onSubmit={onSubmit} className="bg-white border rounded-lg p-4 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Agent */}
+          <div>
+            <label className="block text-xs mb-1">Agent</label>
+            <select
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={form.agent_id}
+              onChange={(e) => updateField('agent_id', e.target.value)}
+            >
+              <option value="">Select agent</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Batch */}
+          <div>
+            <label className="block text-xs mb-1">Batch</label>
+            <select
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={form.batch_id}
+              onChange={(e) => updateField('batch_id', e.target.value)}
+            >
+              <option value="">Optional</option>
+              {batches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Cities */}
+          <div>
+            <label className="block text-xs mb-1">Pickup City</label>
+            <input
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={form.pickup_city}
+              onChange={(e) => updateField('pickup_city', e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs mb-1">Dropoff City</label>
+            <input
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={form.dropoff_city}
+              onChange={(e) => updateField('dropoff_city', e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Datetime / vehicle */}
+          <div>
+            <label className="block text-xs mb-1">Pickup Date &amp; Time</label>
+            <input
+              type="datetime-local"
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={form.pickup_datetime}
+              onChange={(e) => updateField('pickup_datetime', e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs mb-1">Vehicle</label>
+            <select
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={form.vehicle_id}
+              onChange={(e) => updateField('vehicle_id', e.target.value)}
+            >
+              <option value="">Select vehicle</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Numbers */}
+          <div>
+            <label className="block text-xs mb-1">PAX</label>
+            <input
+              type="number"
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={form.pax_count}
+              onChange={(e) => updateField('pax_count', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs mb-1">Selling Price (SAR)</label>
+            <input
+              type="number"
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={form.selling_price}
+              onChange={(e) => updateField('selling_price', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs mb-1">Supplier Cost (SAR)</label>
+            <input
+              type="number"
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={form.supplier_cost}
+              onChange={(e) => updateField('supplier_cost', e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs mb-1">Notes</label>
+          <textarea
+            className="w-full border rounded px-2 py-1 text-sm"
+            rows={3}
+            value={form.notes}
+            onChange={(e) => updateField('notes', e.target.value)}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm"
+        >
+          {loading ? 'Saving...' : 'Save Booking'}
+        </button>
+      </form>
+    </div>
+  );
+}
