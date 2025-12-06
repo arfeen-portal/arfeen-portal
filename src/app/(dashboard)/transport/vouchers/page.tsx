@@ -1,31 +1,12 @@
-function Th({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <th
-      className={`px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide ${
-        className || ''
-      }`}
-    >
-      {children}
-    </th>
-  );
-}
+// src/app/(dashboard)/transport/vouchers/page.tsx
 
-function Td({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+export default function TransportVouchersPage() {
   return (
-    <td className={`px-3 py-2 whitespace-nowrap text-xs ${className || ''}`}>
-      {children}
-    </td>
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold">Transport Vouchers</h1>
+      <p className="text-sm text-gray-500 mt-2">
+        This page will show transport voucher listing and details.
+      </p>
+    </div>
   );
 }
