@@ -1,7 +1,11 @@
-// mobile/src/lib/supabaseClient.ts
+// src/lib/supabaseClient.ts
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+
+if (!SUPABASE_URL) {
+  throw new Error("supabaseUrl is required");
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
