@@ -1,12 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
 
 const steps = ["Basic Info", "Company Details"];
 
 export default function AgentRegisterPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+ // agar tumhare project me helper file hai to usko use kar sakte ho
 
   const [form, setForm] = useState({
     companyName: "",
@@ -30,7 +39,6 @@ export default function AgentRegisterPage() {
     acceptTerms: false,
   });
 
-  // 🔧 FIXED FUNCTION (yahi pe error tha)
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -91,11 +99,74 @@ export default function AgentRegisterPage() {
 
     setIsSubmitting(true);
     try {
-      // Yahan baad mein Supabase / API call lagani hai
-      alert("Demo: Agent registration form submit ho gaya (UI only).");
+      // 1) Auth user create
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: {
+            data: {
+              full_name: form.adminName,
+              company_name: form.companyName,
+              phone:
+                (form.country === "Pakistan" ? "+92" : "+966") + form.mobile,
+            },
+          },
+        });
+
+      if (signUpError) {
+        console.error(signUpError);
+        alert("Sign up error: " + signUpError.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const user = signUpData.user;
+      if (!user) {
+        alert("User create nahi hua, Supabase response check karein.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 2) Agents table me row insert
+      const fullPhone =
+        (form.country === "Pakistan" ? "+92" : "+966") + form.mobile;
+
+      const { error: insertError } = await supabase.from("agents").insert({
+        user_id: user.id,
+        company_name: form.companyName,
+        country: form.country,
+        city: form.city,
+        admin_name: form.adminName,
+        phone: fullPhone,
+        email: form.email,
+        website: form.website || null,
+        address: form.address || null,
+        currency: form.currency,
+        volume: form.volume ? Number(form.volume) : null,
+        services: form.services, // JSONB column
+        status: "pending", // admin approve karega
+      });
+
+      if (insertError) {
+        console.error(insertError);
+        alert(
+          "Account ban gaya hai lekin company details save karte waqt error aaya: " +
+            insertError.message
+        );
+        // phir bhi dashboard pe bhej sakte hain:
+        router.push("/dashboard");
+        return;
+      }
+
+      // 3) Success – redirect
+      alert(
+        "Account create ho gaya! Aapka status abhi 'pending' hai. Admin approval ke baad rates unlock honge."
+      );
+      router.push("/dashboard");
     } catch (error) {
       console.error(error);
-      alert("Koi error aa gaya, console check karo.");
+      alert("Unexpected error aa gaya, console check karein.");
     } finally {
       setIsSubmitting(false);
     }

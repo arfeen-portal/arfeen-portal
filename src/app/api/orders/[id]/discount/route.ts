@@ -1,31 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// POST /api/orders/[id]/discount
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } } // ✅ yahan Promise nahi, simple object
+  { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-
-  // body agar chahiye to:
-  let body: any = null;
   try {
-    body = await req.json();
-  } catch {
-    // body optional hai, ignore
+    const { id } = params;
+    const body = await req.json();
+
+    // TODO: yahan apni actual discount logic lagao
+    // e.g. order ko db se fetch karo, discount apply karo, update karo
+
+    return NextResponse.json(
+      {
+        ok: true,
+        orderId: id,
+        data: body,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("discount POST error", error);
+    return NextResponse.json(
+      { ok: false, error: "Internal server error" },
+      { status: 500 }
+    );
   }
-
-  // TODO: yahan apna real discount logic lagao
-  // e.g. Supabase se order nikaalna, discount apply karna, etc.
-
-  return NextResponse.json(
-    {
-      ok: true,
-      orderId: id,
-      message: "Discount route working",
-      payload: body,
-    },
-    { status: 200 }
-  );
 }
-
