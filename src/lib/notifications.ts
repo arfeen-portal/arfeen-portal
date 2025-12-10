@@ -1,85 +1,43 @@
-// src/lib/notifications.ts
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
-// Transport booking notification payload
-export type TransportNotificationPayload = {
-  bookingRef: string;
-  passengerName: string;
-  passengers: number;
-  pickupCity: string;
-  dropoffCity: string;
-  date: string;
-  time: string;
-  vehicleType: string;
-  driverName?: string;
-  driverPhone?: string;
-};
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
-// Customer message (WhatsApp / SMS)
-export function buildTransportCustomerMessage(
-  p: TransportNotificationPayload
-): string {
-  return (
-    `Assalamualaikum ${p.passengerName},\n\n` +
-    `Aap ka Arfeen Travel transport booking confirm ho chuka hai.\n\n` +
-    `Booking Ref: ${p.bookingRef}\n` +
-    `Route: ${p.pickupCity} → ${p.dropoffCity}\n` +
-    `Date: ${p.date}\n` +
-    `Time: ${p.time}\n` +
-    `Vehicle: ${p.vehicleType}\n` +
-    `Passengers: ${p.passengers}\n` +
-    (p.driverName
-      ? `\nDriver: ${p.driverName}` +
-        (p.driverPhone ? ` (${p.driverPhone})` : "") +
-        `\n`
-      : "") +
-    `\nMehrbani kar ke flight se nikalte hi apna WhatsApp on rakhen aur driver se contact me rahen.\n\n` +
-    `JazakAllahu khair,\nArfeen Travel`
-  );
-}
+export async function registerForPushNotificationsAsync() {
+  if (!Device.isDevice) {
+    console.log('Push notifications only work on physical device');
+    return null;
+  }
 
-// Driver message
-export function buildTransportDriverMessage(
-  p: TransportNotificationPayload
-): string {
-  return (
-    `Assalamualaikum ${p.driverName || ""},\n\n` +
-    `Naya job Arfeen Travel se assign hua hai.\n\n` +
-    `Booking Ref: ${p.bookingRef}\n` +
-    `Passenger: ${p.passengerName} (x${p.passengers})\n` +
-    `Route: ${p.pickupCity} → ${p.dropoffCity}\n` +
-    `Date: ${p.date}\n` +
-    `Time: ${p.time}\n` +
-    `Vehicle: ${p.vehicleType}\n\n` +
-    `Passenger se WhatsApp pe confirm zaroor kar len jab aap pohanch jayein.\n\n` +
-    `Arfeen Dispatch`
-  );
-}
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
 
-// Package booking payload
-export type PackageNotificationPayload = {
-  bookingRef: string;
-  passengerName: string;
-  passengers: number;
-  packageName: string;
-  travelDates: string;
-  totalPrice: string;
-  perPersonPrice: string;
-};
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
 
-export function buildPackageCustomerMessage(
-  p: PackageNotificationPayload
-): string {
-  return (
-    `Assalamualaikum ${p.passengerName},\n\n` +
-    `Aap ka Umrah package Arfeen Travel ke saath confirm ho chuka hai.\n\n` +
-    `Booking Ref: ${p.bookingRef}\n` +
-    `Package: ${p.packageName}\n` +
-    `Travel dates: ${p.travelDates}\n` +
-    `Total: ${p.totalPrice}\n` +
-    `Per person: ${p.perPersonPrice}\n` +
-    `Passengers: ${p.passengers}\n\n` +
-    `Detailed voucher aap ko alag se PDF / image ke roop mein share kiya jayega.\n` +
-    `Koi question ho to isi WhatsApp par reply kar sakte hain.\n\n` +
-    `JazakAllahu khair,\nArfeen Travel`
-  );
+  if (finalStatus !== 'granted') {
+    console.log('Failed to get push token');
+    return null;
+  }
+
+  const tokenData = await Notifications.getExpoPushTokenAsync();
+  const token = tokenData.data;
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+    });
+  }
+
+  return token;
 }

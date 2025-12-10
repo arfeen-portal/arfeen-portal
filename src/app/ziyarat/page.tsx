@@ -1,53 +1,22 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-
-type Shrine = {
-  id: string;
-  name_default: string;
-  city: string | null;
-  country_code: string;
-};
+"use client";
 
 export default function ZiyaratPage() {
-  const [shrines, setShrines] = useState<Shrine[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch('/api/ziyarat/shrines');
-        const json = await res.json();
-        if (res.ok) setShrines(json.shrines || []);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Ziyarat Planner</h1>
-      <p className="text-xs text-gray-500">
-        Najaf, Karbala, Mashhad, Qom, Madinah etc. ke shrines ko AI-based planner
-        ke sath connect karenge.
-      </p>
+    <div className="p-4 sm:p-6">
+      <div className="rounded-2xl bg-gradient-to-r from-[#001B4D] to-[#12377A] p-5 text-white shadow-lg">
+        <h1 className="text-xl font-semibold">Ziyarat Module</h1>
+        <p className="mt-1 text-xs text-blue-100">
+          Ziyarat attendance, QR scan, certificates waghera ab Groups module
+          ke andar manage ho rahe hain.
+        </p>
+      </div>
 
-      {loading && <p className="text-sm">Loading shrines…</p>}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {shrines.map((s) => (
-          <div
-            key={s.id}
-            className="bg-white rounded-lg shadow-sm px-3 py-2 text-xs"
-          >
-            <div className="font-semibold">{s.name_default}</div>
-            <div className="text-gray-500">
-              {s.city} • {s.country_code}
-            </div>
-          </div>
-        ))}
+      <div className="mt-6 rounded-2xl border border-dashed border-gray-200 bg-white p-5 text-xs text-gray-600">
+        Abhi Ziyarat ke liye main workflow yeh hai:
+        <ol className="mt-2 list-decimal space-y-1 pl-4">
+          <li><span className="font-semibold">Groups</span> page se group select karein.</li>
+          <li>Group dashboard se <span className="font-semibold">Leader Console</span>, <span className="font-semibold">QR Print</span> aur <span className="font-semibold">Certificates</span> use karein.</li>
+        </ol>
       </div>
     </div>
   );

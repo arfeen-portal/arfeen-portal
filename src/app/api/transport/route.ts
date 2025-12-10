@@ -1,25 +1,15 @@
-// src/app/api/transport/route.ts
-import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase";
+import { NextRequest, NextResponse } from "next/server";
 
-// Example handler: create a transport order
-export async function POST(req: Request) {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const payload = await req.json();
+export async function GET() {
+  return NextResponse.json({ ok: true, message: "Transport GET working" });
+}
 
-    // Make sure table exists: public.transport_orders
-    const { data, error } = await supabase
-      .from("transport_orders")
-      .insert(payload)
-      .select()
-      .single();
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => null);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ data }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Unexpected error" }, { status: 500 });
-  }
+  return NextResponse.json({
+    ok: true,
+    message: "Transport POST working",
+    data: body,
+  });
 }

@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabaseAdmin";
 
 const supabaseAdmin = createAdminClient();
 
+
 export async function POST(request: Request) {
   try {
     const { familyCode, title, startsAt, endsAt } = await request.json();
