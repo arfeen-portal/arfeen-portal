@@ -1,21 +1,28 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+// baaki tumhare imports yahan rahen (createAdminClient, etc.)
 
 export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
+  // 👈 naya tareeqa: params ko await karo
+  const { id } = await params;
+
+  // ↓ yahan se neeche tumhara purana logic as-is rakh sakte ho
+  // example:
+  /*
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
-    .from('hotel_prayer_hall_status')
+    .from('hotel_prayer_halls')
     .select('*')
-    .eq('place_id', params.id)
-    .maybeSingle();
+    .eq('hotel_id', id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error(error);
+    return NextResponse.json({ error: 'Failed to fetch prayer halls' }, { status: 500 });
   }
 
-  return NextResponse.json({ status: data });
+  return NextResponse.json({ data }, { status: 200 });
+  */
 }
