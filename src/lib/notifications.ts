@@ -1,43 +1,77 @@
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+// src/lib/notifications.ts
+// ❗ Ye file sirf TEXT banane ke helpers rakhegi.
+// Expo / React Native imports YAHAN NAHIN honge.
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+export type TransportMessageInput = {
+  customerName?: string;
+  driverName?: string;
+  pickupCity: string;
+  dropoffCity: string;
+  pickupTime: string; // already formatted for SMS/WhatsApp
+  vehicleType: string;
+  bookingId?: string | number;
+};
 
-export async function registerForPushNotificationsAsync() {
-  if (!Device.isDevice) {
-    console.log('Push notifications only work on physical device');
-    return null;
-  }
+export type PackageMessageInput = {
+  customerName?: string;
+  packageName: string;
+  checkInDate: string;
+  checkOutDate: string;
+  bookingId?: string | number;
+};
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
+export function buildTransportCustomerMessage(input: TransportMessageInput) {
+  const {
+    customerName = "Dear Guest",
+    pickupCity,
+    dropoffCity,
+    pickupTime,
+    vehicleType,
+    bookingId,
+  } = input;
 
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
+  return (
+    `Assalamualaikum ${customerName}! ` +
+    `Your transport booking is CONFIRMED from ${pickupCity} to ${dropoffCity}. ` +
+    `Pickup time: ${pickupTime}, Vehicle: ${vehicleType}. ` +
+    (bookingId ? `Booking ID: ${bookingId}. ` : "") +
+    `JazakAllah for choosing Arfeen Travel.`
+  );
+}
 
-  if (finalStatus !== 'granted') {
-    console.log('Failed to get push token');
-    return null;
-  }
+export function buildTransportDriverMessage(input: TransportMessageInput) {
+  const {
+    driverName = "Dear Driver",
+    pickupCity,
+    dropoffCity,
+    pickupTime,
+    vehicleType,
+    bookingId,
+  } = input;
 
-  const tokenData = await Notifications.getExpoPushTokenAsync();
-  const token = tokenData.data;
+  return (
+    `${driverName}, new ride assigned ` +
+    `from ${pickupCity} to ${dropoffCity}. ` +
+    `Pickup time: ${pickupTime}, Vehicle: ${vehicleType}. ` +
+    (bookingId ? `Booking ID: ${bookingId}. ` : "") +
+    `Please be on time and keep passenger updated.`
+  );
+}
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-    });
-  }
+export function buildPackageCustomerMessage(input: PackageMessageInput) {
+  const {
+    customerName = "Dear Guest",
+    packageName,
+    checkInDate,
+    checkOutDate,
+    bookingId,
+  } = input;
 
-  return token;
+  return (
+    `Assalamualaikum ${customerName}! ` +
+    `Your package "${packageName}" is confirmed. ` +
+    `Check-in: ${checkInDate}, Check-out: ${checkOutDate}. ` +
+    (bookingId ? `Booking ID: ${bookingId}. ` : "") +
+    `For any help, contact Arfeen Travel support.`
+  );
 }

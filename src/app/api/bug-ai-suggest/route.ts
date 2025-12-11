@@ -1,73 +1,68 @@
+// src/app/api/bug-ai-suggest/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { withBugCapture } from "@/lib/withBugCapture";
-import { createSupabaseServerClient } from "@/lib/supabase";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-const MODEL = "gpt-4o-mini"; // fast + cheap; switch if you prefer
+const MODEL = "gpt-4o-mini";
 
-async function suggest(req: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const { bugId } = await req.json();
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { description, context } = body as {
+      description: string;
+      context?: string;
+    };
 
-  // fetch the bug row
-  const { data: bug } = await supabase
-    .from("bug_events")
-    .select("*")
-    .eq("id", bugId)
-    .single();
+    if (!description) {
+      return NextResponse.json(
+        { error: "Missing bug description" },
+        { status: 400 }
+      );
+    }
 
-  if (!bug) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "OPENAI_API_KEY not configured" },
+        { status: 500 }
+      );
+    }
 
-  // call OpenAI
-  const prompt = `
-You are an expert Next.js + Supabase engineer.
-Bug summary:
-- Route: ${bug.route}
-- Source: ${bug.source}
-- Message: ${bug.message}
-- Stack (may be partial):
-${bug.stack ?? ""}
+    const prompt =
+      `You are a senior Next.js + Supabase engineer helping debug a portal.\n\n` +
+      `Bug description:\n${description}\n\n` +
+      (context ? `Extra context:\n${context}\n\n` : "") +
+      `Return:\n- Likely cause\n- Files/areas to check\n- Step-by-step fix\n- Any safety/performance notes.\n`;
 
-Task:
-1) Explain likely root cause in 2-3 bullets.
-2) Provide a minimal code fix in TypeScript for this repo structure (Next.js App Router, Supabase SSR).
-3) If it's an import path problem, suggest the exact relative path fix.
-Return in JSON with keys "summary" and "code".
-  `.trim();
+    const response = await fetch(OPENAI_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
 
-  const res = await fetch(OPENAI_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.OPENAI_API_KEY!}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2,
-    }),
-  });
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("OpenAI error:", text);
+      return NextResponse.json(
+        { error: "OpenAI API error" },
+        { status: 500 }
+      );
+    }
 
-  const json = await res.json();
-  const content =
-    json?.choices?.[0]?.message?.content ??
-    "No suggestion generated. Check API key/usage.";
+    const json = await response.json();
+    const message = json.choices?.[0]?.message?.content ?? "";
 
-  // naive parse: try splitting summary/code
-  let suggestion = content;
-  let suggestion_code = "";
-  const codeMatch = content.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
-  if (codeMatch) suggestion_code = codeMatch[1];
-
-  await supabase
-    .from("bug_events")
-    .update({ suggestion, suggestion_code, status: "triaged" })
-    .eq("id", bugId);
-
-  return NextResponse.json({ ok: true, suggestion, suggestion_code });
+    return NextResponse.json({ suggestion: message });
+  } catch (error) {
+    console.error("bug-ai-suggest error", error);
+    return NextResponse.json(
+      { error: "Unexpected error" },
+      { status: 500 }
+    );
+  }
 }
-
-export const POST = withBugCapture(suggest, {
-  route: "/api/bug-ai-suggest",
-  source: "api",
-});

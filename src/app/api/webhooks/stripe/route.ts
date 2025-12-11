@@ -17,11 +17,6 @@ const serverClient = () =>
     auth: { persistSession: false }
   });
 
-export const config = {
-  api: {
-    bodyParser: false
-  }
-} as any;
 
 export async function POST(req: NextRequest) {
   const supabase = serverClient();
