@@ -34,6 +34,7 @@ type InvoiceItem = {
 };
 
 export default function InvoiceDetailPage({ params }: { params: { id: string } }) {
+
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
