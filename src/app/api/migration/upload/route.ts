@@ -1,8 +1,6 @@
-// src/app/api/migration/upload/route.ts
 import { NextResponse } from "next/server";
-// @ts-ignore
-import XLSX from "xlsx";
-
+// // @ts-ignore
+import * as XLSX from "xlsx";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
