@@ -1,15 +1,13 @@
-// src/app/transport/drivers/delete/page.tsx
+// src/app/transport/routes/[id]/delete/page.tsx
 
-import { redirect } from "next/navigation";
-
-export default function DriverDeletePage() {
-  // Yahan future mein agar aap server action / API call se delete karna chahein
-  // to wo logic add kar sakte hain.
-
-  // Filhaal simple redirect, taki page ek valid module ho
-  redirect("/transport/drivers");
-
-  // Next.js redirect ke baad yahan tak nahi aata,
-  // lekin type-safety ke liye ek fallback return likh dete hain.
-  return null;
+export default function RouteDeletePage() {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold">Delete Transport Route</h1>
+      <p className="mt-2 text-sm text-gray-600">
+        Transport &gt; Routes &gt; [id] &gt; Delete page is working.
+      </p>
+    </div>
+  );
 }
+
