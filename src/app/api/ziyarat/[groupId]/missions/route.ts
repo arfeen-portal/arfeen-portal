@@ -1,11 +1,10 @@
-// app/api/ziyarat/[groupId]/missions/route.ts
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export async function GET(
-  req: Request,
-  { params }: { params: { groupId: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
+  const { params } = context;
+  const { groupId } = params;
   const supabase = await createClient();
 
   const { data: pilgrims } = await supabase
