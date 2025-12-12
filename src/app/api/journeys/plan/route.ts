@@ -46,14 +46,14 @@ export async function POST(req: Request) {
   }
 
   // 2) Places fetch by slug
-  const slugs = [
-    ...new Set(
-      fakeSegments
-        .map((s) => s.from_slug)
-        .concat(fakeSegments.map((s) => s.to_slug))
-        .filter(Boolean)
-    ),
-  ];
+ const slugs = Array.from(
+  new Set(
+    fakeSegments
+      .map((s) => s.from_slug)
+      .concat(fakeSegments.map((s) => s.to_slug))
+  )
+);
+
 
   const { data: places } = await supabase
     .from('places')
