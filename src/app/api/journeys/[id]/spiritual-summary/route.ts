@@ -1,14 +1,9 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
-  const journeyId = params.id;
-
-  // 🔴 pehle: const supabase = createClient();
-  const supabase = await createClient(); // ✅
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createClient } from "@/utils/supabase/server";
+export async function GET(req: NextRequest, context: any) {
+  const { params } = context;
+  const { id } = params;
 
   const { data, error } = await supabase.rpc(
     'spiritual_summary_for_journey',
