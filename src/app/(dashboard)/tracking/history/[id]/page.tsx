@@ -8,10 +8,14 @@ type LocationPoint = {
   created_at: string;
 };
 
-export default function LocationHistoryPage({
-  params,
-}: {
-  params: { id: string };
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  // ...
+}
+
 }) {
   const bookingId = params.id;
   const [items, setItems] = useState<LocationPoint[]>([]);

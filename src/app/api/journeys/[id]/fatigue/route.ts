@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// ⬆️ imports same hi rahenge
+
+export async function POST(req: NextRequest, context: any) {
+  const { params } = context;
+  const { id } = params;
+
+  // ⬇️ YAHAN SE NEECHAY AAPKA PURANA CODE BILKUL AS-IS:
   const supabase = await createClient();
   const body = await req.json();
+  // baaki jo bhi tumne likha hai, sab jaisa hai waisa rehne do
+
 
   const { userId, steps, temperature, sleepHours, hydrationLiters, subjectiveFatigue } =
     body;

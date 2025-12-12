@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-// yahan apne imports jo already the, woh rakhna:
+// yahan apne helper imports rakho:
 // import { createAdminClient } from "@/lib/supabase/admin";
 // import { generateInvoicePdf } from "@/lib/pdf/invoices";
-// etc...
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // 🔑 naya style: params ko await karo
+  // ✅ naya Next 16 style: params ko await karo
   const { id } = await params;
 
-  // 👇 yahan se neeche apna purana logic paste karo
+  // ⬇️ yahan se neeche apna actual invoice + PDF logic rakho
+
   /*
   try {
     const supabase = createAdminClient();

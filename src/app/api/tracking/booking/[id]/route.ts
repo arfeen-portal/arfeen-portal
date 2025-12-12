@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import type { NextRequest } from "next/server";
+import { createClient } from "@/utils/supabase/server";
 
-type Params = { params: { id: string } };
+export async function GET(req: NextRequest, context: any) {
+  const { params } = context;
+  const { id } = params;
 
-export async function GET(_req: Request, { params }: Params) {
+  // ⬇️ Yahan se neeche tumhara PURANA code jaisa ka taisa rahega
+
   const supabase = createClient();
   const bookingId = params.id;
 

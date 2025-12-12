@@ -7,10 +7,9 @@ type DiscountRequestBody = {
   amount?: number;
 };
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: NextRequest, context: any) {
+  const { params } = context;
+  const { id } = params;
   try {
     const orderId = params.id;
 
