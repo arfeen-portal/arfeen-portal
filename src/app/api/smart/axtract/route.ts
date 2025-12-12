@@ -1,46 +1,85 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-export async function POST(req: NextRequest) {
-  try {
-    const data = await req.formData();
-    const file = data.get("file") as File;
+export const runtime = "nodejs";
 
-    if (!file) {
-      return NextResponse.json({ error: "No ticket uploaded" }, { status: 400 });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+
+/**
+ * Safely extract plain text from Responses API output items
+ * (works even if first item is a tool call etc.)
+ */
+function extractTextFromOutput(output: any[] | undefined): string {
+  if (!Array.isArray(output)) return "";
+
+  for (const item of output) {
+    // Most common: { type: "message", content: [{ type: "output_text", text: "..." }]}
+    if (item?.type === "message" && Array.isArray(item?.content)) {
+      const textPart =
+        item.content.find((c: any) => c?.type === "output_text" && typeof c?.text === "string") ||
+        item.content.find((c: any) => c?.type === "text" && typeof c?.text === "string");
+
+      if (textPart?.text) return String(textPart.text);
+    }
+  }
+
+  return "";
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+
+    // Accept a few possible keys so frontend break na ho
+    const inputText =
+      body?.text ??
+      body?.input ??
+      body?.query ??
+      body?.prompt ??
+      "";
+
+    if (!inputText || typeof inputText !== "string") {
+      return NextResponse.json(
+        { error: "Missing 'text' in request body." },
+        { status: 400 }
+      );
     }
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY!,
-    });
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    const result = await openai.responses.parse({
-      model: "gpt-4o-mini",
+    const result = await openai.responses.create({
+      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
       input: [
         {
-          role: "user",
-          content: "Extract passenger, from, to, flight number, date, time.",
+          role: "system",
+          content:
+            "You are an extraction engine. If user provides unstructured text, extract key fields. " +
+            "Return JSON only if it is clearly structured; otherwise return a short clean summary string.",
         },
+        { role: "user", content: inputText },
       ],
-      files: [new File([buffer], file.name)],
-      schema: {
-        type: "object",
-        properties: {
-          passenger: { type: "string" },
-          from: { type: "string" },
-          to: { type: "string" },
-          flight: { type: "string" },
-          date: { type: "string" },
-          time: { type: "string" },
-        },
-      },
     });
 
-    return NextResponse.json(result.output[0].parsed);
+    // ✅ This is the supported convenience field (no .parsed property)
+    const outputText =
+      (result as any).output_text ??
+      extractTextFromOutput((result as any).output) ??
+      "";
+
+    // If AI returned JSON string, parse it; otherwise return plain text
+    let data: any = outputText;
+    try {
+      data = JSON.parse(outputText);
+    } catch {
+      // keep as string
+    }
+
+    return NextResponse.json({ ok: true, data });
   } catch (e: any) {
     console.error("AI extract error:", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: e?.message || "Unknown error" },
+      { status: 500 }
+    );
   }
 }
