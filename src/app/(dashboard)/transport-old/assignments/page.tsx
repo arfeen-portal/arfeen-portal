@@ -2,11 +2,13 @@ import { supabase } from "@/lib/supabaseClient";
 
 type AssignmentRow = {
   id: string;
-  is_primary: boolean;
+  is_primary: boolean | null;
   start_date: string | null;
   end_date: string | null;
-  transport_drivers: { full_name: string | null } | null;
-  transport_vehicles: { name: string | null; vehicle_class: string | null } | null;
+
+  // Supabase nested relations usually come as arrays
+  transport_drivers: { full_name: string | null }[] | null;
+  transport_vehicles: { name: string | null; vehicle_class?: string | null }[] | null;
 };
 
 export default async function AssignmentsPage() {
@@ -24,7 +26,7 @@ export default async function AssignmentsPage() {
     )
     .order("start_date", { ascending: false });
 
-  const rows = (data as AssignmentRow[]) || [];
+  const rows = ((data as unknown) as AssignmentRow[]) ?? [];
 
   return (
     <div className="space-y-4">
@@ -38,7 +40,7 @@ export default async function AssignmentsPage() {
 
       <div className="overflow-x-auto rounded-lg border bg-white">
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b bg-gray-50 text-xs font-semibold uppercase text-gray-600">
+          <thead className="border-b bg-gray-50 text-xs font-semibold uppercase">
             <tr>
               <th className="px-3 py-2">Driver</th>
               <th className="px-3 py-2">Vehicle</th>
@@ -47,37 +49,39 @@ export default async function AssignmentsPage() {
               <th className="px-3 py-2">End</th>
             </tr>
           </thead>
+
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b last:border-b-0">
-                <td className="px-3 py-2">
-                  {r.transport_drivers?.full_name || "-"}
-                </td>
-                <td className="px-3 py-2">
-                  {r.transport_vehicles?.name || "-"}{" "}
-                  {r.transport_vehicles?.vehicle_class
-                    ? `(${r.transport_vehicles?.vehicle_class})`
-                    : ""}
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {r.is_primary ? (
-                    <span className="inline-flex rounded-full border border-green-500 bg-green-50 px-2 py-0.5 text-[11px] text-green-700">
-                      primary
-                    </span>
-                  ) : (
-                    <span className="inline-flex rounded-full border border-gray-400 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600">
-                      secondary
-                    </span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {r.start_date || "-"}
-                </td>
-                <td className="px-3 py-2 text-xs">
-                  {r.end_date || "-"}
-                </td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              const driverName = r.transport_drivers?.[0]?.full_name ?? "-";
+              const vehicleName = r.transport_vehicles?.[0]?.name ?? "-";
+              const vehicleClass = r.transport_vehicles?.[0]?.vehicle_class ?? "";
+
+              return (
+                <tr key={r.id} className="border-b last:border-b-0">
+                  <td className="px-3 py-2">{driverName}</td>
+
+                  <td className="px-3 py-2">
+                    {vehicleName}
+                    {vehicleClass ? ` (${vehicleClass})` : ""}
+                  </td>
+
+                  <td className="px-3 py-2 text-xs">
+                    {r.is_primary ? (
+                      <span className="inline-flex rounded-full border px-2 py-0.5">
+                        primary
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full border px-2 py-0.5">
+                        secondary
+                      </span>
+                    )}
+                  </td>
+
+                  <td className="px-3 py-2 text-xs">{r.start_date || "-"}</td>
+                  <td className="px-3 py-2 text-xs">{r.end_date || "-"}</td>
+                </tr>
+              );
+            })}
 
             {!rows.length && !error && (
               <tr>
