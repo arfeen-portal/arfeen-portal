@@ -1,10 +1,9 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-
-export async function GET(
-  _req: Request,
-  { params }: { params: { slug: string } }
-) {
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createClient } from "@/utils/supabase/server";
+export async function GET(req: NextRequest, context: any) {
+  const { params } = context;
+  const { slug } = params;
   // 🔴 pehle: const supabase = createClient();
   const supabase = await createClient(); // ✅
 
