@@ -1,40 +1,35 @@
-// src/lib/supabase.ts
 import { createClient } from "@supabase/supabase-js";
 
-function mustGetEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env: ${name}`);
-  return v;
+let _admin: ReturnType<typeof createClient> | null = null;
+
+function normalizeUrl(v?: string) {
+  if (!v) return "";
+  return v.trim().replace(/^"|"$/g, "").replace(/\/+$/, "");
 }
 
-/**
- * Server-side Supabase client (Service Role).
- * Use ONLY in server code (API routes / server actions).
- */
-export function createSupabaseServerClient() {
-  const url = mustGetEnv("NEXT_PUBLIC_SUPABASE_URL");
-  // Prefer SERVICE_ROLE if you use it; fallback to SUPABASE_SERVICE_ROLE_KEY if that’s what you set
+export function getSupabaseAdminClient() {
+  if (_admin) return _admin;
+
+  const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE ||
-    "";
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || "").trim();
 
-  if (!serviceKey) {
-    throw new Error(
-      "Missing env: SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE)"
-    );
+  if (!supabaseUrl) throw new Error("supabaseUrl is required");
+  if (!/^https?:\/\/.+/i.test(supabaseUrl)) {
+    throw new Error("Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL");
   }
+  if (!serviceKey) throw new Error("supabase service role key is required");
 
-  return createClient(url, serviceKey, {
+  _admin = createClient(supabaseUrl, serviceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
     },
   });
+
+  return _admin;
 }
 
-/**
- * Backward-compatible alias (agar project me kahin aur use ho raha ho)
- */
-export const createSupabaseAdminClient = createSupabaseServerClient;
+export const createSupabaseAdminClient = getSupabaseAdminClient;
+export const createAdminClient = getSupabaseAdminClient;
