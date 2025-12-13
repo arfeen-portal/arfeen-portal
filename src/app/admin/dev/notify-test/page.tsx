@@ -1,40 +1,31 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function NotifyTestPage() {
-  const [bookingId, setBookingId] = useState('');
-  const [driverId, setDriverId] = useState('');
+  const [bookingId, setBookingId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [result, setResult] = useState<string>("");
 
-  const handleAssignAndNotify = async () => {
-    if (!bookingId || !driverId) return;
+  const sendTest = async () => {
+    setLoading(true);
+    setResult("");
 
     try {
-      setLoading(true);
-      setMessage(null);
+      // Example: just a lightweight query to verify client works
+      // Aap apna actual logic yahan rakh sakte ho
+      const { data, error } = await supabase
+        .from("transport_bookings")
+        .select("id,status")
+        .eq("id", bookingId)
+        .maybeSingle();
 
-      const { error: updateError } = await supabase
-        .from('transport_bookings')
-        .update({ driver_id: driverId })
-        .eq('id', bookingId);
+      if (error) throw error;
 
-      if (updateError) {
-        setMessage('Failed to assign driver');
-        return;
-      }
-
-      const { error: funcError } = await supabase.functions.invoke('notify-driver', {
-        body: { booking_id: bookingId },
-      });
-
-      if (funcError) {
-        setMessage('Driver assigned, but notification failed');
-      } else {
-        setMessage('Driver assigned + notification sent');
-      }
+      setResult(data ? JSON.stringify(data, null, 2) : "No record found");
+    } catch (e: any) {
+      setResult(e?.message || "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -42,32 +33,29 @@ export default function NotifyTestPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Notify Driver Test</h1>
+      <h1 className="text-xl font-semibold">Notify Test</h1>
 
-      <div className="space-y-2 max-w-md">
+      <div className="space-y-2">
+        <label className="block text-sm text-gray-600">Booking ID</label>
         <input
-          className="border px-3 py-2 rounded w-full"
-          placeholder="Booking ID"
           value={bookingId}
           onChange={(e) => setBookingId(e.target.value)}
+          className="w-full rounded-lg border px-3 py-2"
+          placeholder="Paste booking id..."
         />
-        <input
-          className="border px-3 py-2 rounded w-full"
-          placeholder="Driver ID"
-          value={driverId}
-          onChange={(e) => setDriverId(e.target.value)}
-        />
-
-        <button
-          onClick={handleAssignAndNotify}
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded mt-2"
-        >
-          {loading ? 'Working...' : 'Assign + Notify'}
-        </button>
-
-        {message && <p className="text-sm mt-2">{message}</p>}
       </div>
+
+      <button
+        onClick={sendTest}
+        disabled={loading || !bookingId}
+        className="rounded-lg bg-black text-white px-4 py-2 disabled:opacity-50"
+      >
+        {loading ? "Testing..." : "Test"}
+      </button>
+
+      <pre className="rounded-lg border bg-gray-50 p-3 text-sm overflow-auto">
+        {result}
+      </pre>
     </div>
   );
 }
