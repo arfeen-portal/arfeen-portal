@@ -1,56 +1,60 @@
-import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabaseAdmin";
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
-const supabaseAdmin = createAdminClient();
+export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { familyCode, memberName, relation } = await request.json();
-
-    if (!familyCode || !memberName) {
+    const supabaseAdmin = getSupabaseAdminSafe();
+    if (!supabaseAdmin) {
       return NextResponse.json(
-        { error: "familyCode and memberName are required" },
+        { error: "Supabase env not configured" },
+        { status: 500 }
+      );
+    }
+
+    const body = await req.json();
+
+    // ✅ expected inputs (adjust to your actual UI)
+    const familyId = body?.family_id || body?.familyId;
+    const memberId = body?.member_id || body?.memberId;
+    const memberName = body?.member_name || body?.name || null;
+
+    if (!familyId || !memberId) {
+      return NextResponse.json(
+        { error: "family_id and member_id required" },
         { status: 400 }
       );
     }
 
-    const { data: family, error: famErr } = await supabaseAdmin
-      .from("families")
+    // ✅ join table name: adjust if your schema differs
+    const joinRow = {
+      family_id: familyId,
+      member_id: memberId,
+      member_name: memberName,
+      joined_at: new Date().toISOString(),
+      status: "active",
+    };
+
+    const { data, error } = await (supabaseAdmin as any)
+      .from("family_members")
+      .insert([joinRow])
       .select("*")
-      .eq("family_code", familyCode)
       .single();
 
-    if (famErr || !family) {
+    if (error) {
+      console.error(error);
       return NextResponse.json(
-        { error: "Family not found" },
-        { status: 404 }
+        { error: "Failed to join family" },
+        { status: 500 }
       );
     }
 
-    const { data: member, error: memErr } = await supabaseAdmin
-      .from("family_members")
-      .insert({
-        family_id: family.id,
-        member_name: memberName,
-        relation: relation ?? "Member",
-        is_admin: false,
-      })
-      .select("*")
-      .single();
-
-    if (memErr) throw memErr;
-
+    return NextResponse.json({ ok: true, member: data });
+  } catch (e: any) {
+    console.error("family join route error:", e);
     return NextResponse.json(
-      {
-        family,
-        member,
-      },
-      { status: 201 }
-    );
-  } catch (err: any) {
-    console.error("family/join error", err);
-    return NextResponse.json(
-      { error: err.message ?? "Unexpected error" },
+      { error: e?.message || "Unknown error" },
       { status: 500 }
     );
   }
