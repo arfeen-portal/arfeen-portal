@@ -9,15 +9,17 @@ function normalizeUrl(v?: string) {
   return v.trim().replace(/^"|"$/g, "").replace(/\/+$/, "");
 }
 
-function getSupabaseAdmin() {
+/**
+ * SAFE admin client (NO throw → build safe)
+ */
+function getSupabaseAdminSafe() {
   const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 
-  if (!supabaseUrl) throw new Error("supabaseUrl is required");
-  if (!/^https?:\/\/.+/i.test(supabaseUrl)) {
-    throw new Error("Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL");
+  // ❗ NEVER throw (build safe)
+  if (!supabaseUrl || !/^https?:\/\//i.test(supabaseUrl) || !serviceKey) {
+    return null;
   }
-  if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required");
 
   return createClient(supabaseUrl, serviceKey, {
     auth: {
@@ -31,11 +33,23 @@ function getSupabaseAdmin() {
 // ---------------- route ----------------
 export async function POST(req: NextRequest) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
-    const { batchId } = await req.json();
+    // ✅ correct helper name
+    const supabaseAdmin = getSupabaseAdminSafe();
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: "Supabase env not configured" },
+        { status: 500 }
+      );
+    }
+
+    const body = await req.json();
+    const batchId = body?.batchId;
 
     if (!batchId) {
-      return NextResponse.json({ error: "batchId required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "batchId required" },
+        { status: 400 }
+      );
     }
 
     // 1) Revert staging rows
@@ -57,18 +71,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2) Audit log
-    await (supabaseAdmin as any)
+    // 2) Audit log (ARRAY insert)
+    const auditRow = {
+      tenant_id: null,
+      user_id: null,
+      batch_id: batchId,
+      action: "rollback",
+      meta: {},
+    };
+
+    const { error: auditError } = await (supabaseAdmin as any)
       .from("agent_import_audit_log")
-      .insert([
-        {
-          tenant_id: null,
-          user_id: null,
-          batch_id: batchId,
-          action: "rollback",
-          meta: {},
-        },
-      ]);
+      .insert([auditRow]);
+
+    if (auditError) {
+      console.error("audit insert error:", auditError);
+      // non-fatal
+    }
 
     return NextResponse.json({ rolled_back: true });
   } catch (e: any) {

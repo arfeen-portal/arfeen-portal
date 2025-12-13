@@ -3,21 +3,21 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-// -------------------- helpers --------------------
+// ---------------- helpers ----------------
 function normalizeUrl(v?: string) {
   if (!v) return "";
   return v.trim().replace(/^"|"$/g, "").replace(/\/+$/, "");
 }
 
-function getSupabaseAdmin() {
+/**
+ * ✅ SAFE: no throw (build safe)
+ * Returns null if env missing/invalid.
+ */
+function getSupabaseAdminSafe() {
   const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 
-  if (!supabaseUrl) throw new Error("supabaseUrl is required");
-  if (!/^https?:\/\/.+/i.test(supabaseUrl)) {
-    throw new Error("Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL");
-  }
-  if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required");
+  if (!supabaseUrl || !/^https?:\/\//i.test(supabaseUrl) || !serviceKey) return null;
 
   return createClient(supabaseUrl, serviceKey, {
     auth: {
@@ -76,11 +76,17 @@ function similarity(a: string, b: string): number {
   return (maxLen - dist) / maxLen;
 }
 
-// -------------------- route --------------------
+// ---------------- route ----------------
 export async function POST(req: NextRequest) {
   try {
-    // ✅ IMPORTANT: create client INSIDE handler (no build-time crash)
-    const supabaseAdmin = getSupabaseAdmin();
+    // ✅ IMPORTANT: safe client (no build-time crash)
+    const supabaseAdmin = getSupabaseAdminSafe();
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: "Supabase env not configured" },
+        { status: 500 }
+      );
+    }
 
     const body = await req.json();
     const batchId = body?.batchId;
@@ -88,7 +94,10 @@ export async function POST(req: NextRequest) {
       typeof body?.threshold === "number" ? body.threshold : 0.82;
 
     if (!batchId) {
-      return NextResponse.json({ error: "batchId required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "batchId required" },
+        { status: 400 }
+      );
     }
 
     // staging rows (unmatched only)
@@ -176,7 +185,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // audit log (insert ARRAY to avoid typing overload issues)
+    // ✅ audit log (INSERT ARRAY)
     const auditRow = {
       tenant_id: null,
       user_id: null,
