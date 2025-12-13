@@ -1,48 +1,49 @@
-import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabaseAdmin";
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
-const supabaseAdmin = createAdminClient();
+export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const familyCode = searchParams.get("familyCode");
-
-    if (!familyCode) {
+    const supabaseAdmin = getSupabaseAdminSafe();
+    if (!supabaseAdmin) {
       return NextResponse.json(
-        { error: "familyCode is required" },
-        { status: 400 }
+        { error: "Supabase env not configured" },
+        { status: 500 }
       );
     }
 
-    const { data: family, error: famErr } = await supabaseAdmin
-      .from("families")
-      .select("id")
-      .eq("family_code", familyCode)
-      .single();
+    const { searchParams } = new URL(req.url);
+    const familyId = searchParams.get("family_id") || searchParams.get("familyId");
+    const memberId = searchParams.get("member_id") || searchParams.get("memberId");
+    const limit = Number(searchParams.get("limit") || "50");
 
-    if (famErr || !family) {
-      return NextResponse.json(
-        { error: "Family not found" },
-        { status: 404 }
-      );
-    }
-
-    const { data: locations, error: locErr } = await supabaseAdmin
+    // ✅ Basic filters (adjust to your schema)
+    let q = (supabaseAdmin as any)
       .from("family_locations")
       .select("*")
-      .eq("family_id", family.id)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(Number.isFinite(limit) ? Math.min(limit, 500) : 50);
 
-    if (locErr) throw locErr;
+    if (familyId) q = q.eq("family_id", familyId);
+    if (memberId) q = q.eq("member_id", memberId);
 
-    return NextResponse.json({ locations });
-  } catch (err: any) {
-    console.error("location/list error", err);
+    const { data, error } = await q;
+
+    if (error) {
+      console.error(error);
+      return NextResponse.json(
+        { error: "Failed to load locations" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, locations: data ?? [] });
+  } catch (e: any) {
+    console.error("location list route error:", e);
     return NextResponse.json(
-      { error: err.message ?? "Unexpected error" },
+      { error: e?.message || "Unknown error" },
       { status: 500 }
     );
   }
 }
-
