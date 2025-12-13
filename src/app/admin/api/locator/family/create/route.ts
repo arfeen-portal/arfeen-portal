@@ -1,65 +1,46 @@
-import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabaseAdmin";
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
-const supabaseAdmin = createAdminClient();
+export const runtime = "nodejs";
 
-function generateFamilyCode() {
-  return "AF-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-}
-
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { familyName, memberName, relation, createdBy } =
-      await request.json();
-
-    if (!familyName || !memberName) {
+    const supabaseAdmin = getSupabaseAdminSafe();
+    if (!supabaseAdmin) {
       return NextResponse.json(
-        { error: "familyName and memberName are required" },
-        { status: 400 }
+        { error: "Supabase env not configured" },
+        { status: 500 }
       );
     }
 
-    const familyCode = generateFamilyCode();
+    const body = await req.json();
 
-    // 1) create family
-    const { data: family, error: famErr } = await supabaseAdmin
+    // ✅ Minimal safe create (aap apni exact fields yahan map kar do)
+    const payload = {
+      tenant_id: body?.tenant_id ?? null,
+      family_name: body?.family_name ?? body?.name ?? "Family",
+      created_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await (supabaseAdmin as any)
       .from("families")
-      .insert({
-        family_name: familyName,
-        family_code: familyCode,
-        created_by: createdBy ?? null,
-      })
+      .insert([payload])
       .select("*")
       .single();
 
-    if (famErr) throw famErr;
+    if (error) {
+      console.error(error);
+      return NextResponse.json(
+        { error: "Failed to create family" },
+        { status: 500 }
+      );
+    }
 
-    // 2) create first member
-    const { data: member, error: memErr } = await supabaseAdmin
-      .from("family_members")
-      .insert({
-        family_id: family.id,
-        member_name: memberName,
-        relation: relation ?? "Self",
-        is_admin: true,
-      })
-      .select("*")
-      .single();
-
-    if (memErr) throw memErr;
-
+    return NextResponse.json({ ok: true, family: data });
+  } catch (e: any) {
+    console.error("family create route error:", e);
     return NextResponse.json(
-      {
-        family,
-        member,
-        familyCode,
-      },
-      { status: 201 }
-    );
-  } catch (err: any) {
-    console.error("family/create error", err);
-    return NextResponse.json(
-      { error: err.message ?? "Unexpected error" },
+      { error: e?.message || "Unknown error" },
       { status: 500 }
     );
   }
