@@ -1,39 +1,29 @@
-import { NextResponse } from 'next/server';
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+// src/app/admin/api/locator/meetup/set/route.ts
+import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase";
 
-export async function POST(request: Request) {
-  try {
-    const { tripId, setByMemberId, title, lat, lng, meetTime } =
-      await request.json();
+export async function POST(req: Request) {
+  const supabase = createAdminClient();
 
-    if (!tripId || !title || !lat || !lng) {
-      return NextResponse.json(
-        { error: 'tripId, title, lat, lng required' },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from('meetup_points')
-      .insert({
-        trip_id: tripId,
-        set_by_member_id: setByMemberId ?? null,
-        title,
-        lat,
-        lng,
-        meet_time: meetTime ?? null,
-      })
-      .select('*')
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json({ meetup: data });
-  } catch (err: any) {
-    console.error('Meetup set error:', err);
+  if (!supabase) {
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, message: "Supabase env missing/invalid (check NEXT_PUBLIC_SUPABASE_URL + keys)." },
       { status: 500 }
     );
   }
+
+  const body = await req.json().catch(() => ({}));
+
+  // TODO: apne columns/table ke mutabiq adjust kar lena
+  const { data, error } = await supabase
+    .from("locator_meetups")
+    .insert([body])
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, meetup: data }, { status: 200 });
 }
