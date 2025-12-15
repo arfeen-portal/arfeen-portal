@@ -27,3 +27,4 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
 
 // Backward compatible export name (agar kahin purana import use ho raha ho)
 export const supabaseClient = getSupabaseBrowserClient;
+export const supabase = getSupabaseBrowserClient();
