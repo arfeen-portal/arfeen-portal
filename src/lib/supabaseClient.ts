@@ -1,12 +1,6 @@
 // src/lib/supabaseClient.ts
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-/**
- * Normalize Supabase URL
- * - trims spaces
- * - removes quotes
- * - removes trailing dots or slashes
- */
 function normalizeUrl(v?: string) {
   if (!v) return "";
   return v
@@ -16,12 +10,11 @@ function normalizeUrl(v?: string) {
     .replace(/[\/.]+$/g, "");
 }
 
-/**
- * 🔐 Browser-safe Supabase client (ANON)
- * - Build-safe (no throw at import time)
- * - Returns null only if env is truly missing
- */
+let _client: SupabaseClient | null = null;
+
 export function getSupabaseBrowserClient(): SupabaseClient | null {
+  if (_client) return _client;
+
   const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
@@ -29,29 +22,33 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
     return null;
   }
 
-  return createClient(supabaseUrl, anonKey, {
+  _client = createClient(supabaseUrl, anonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
   });
+
+  return _client;
 }
 
 /**
- * ✅ Backward-compatible exports
- * - Old code can keep using `supabase`
- * - TS error removed (non-null)
+ * ✅ Lazy + build-safe supabase export
+ * - No throw at import/build time
+ * - Throws only when actually USED and env missing
  */
-export const supabase: SupabaseClient = (() => {
-  const client = getSupabaseBrowserClient();
-  if (!client) {
-    throw new Error(
-      "Supabase browser client is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
-    );
-  }
-  return client;
-})();
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop, receiver) {
+    const client = getSupabaseBrowserClient();
+    if (!client) {
+      throw new Error(
+        "Supabase browser client not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
+      );
+    }
+    return Reflect.get(client as any, prop, receiver);
+  },
+});
 
-// Optional alias (agar kahin supabaseClient naam use ho raha ho)
+// Optional backward alias
 export const supabaseClient = supabase;
