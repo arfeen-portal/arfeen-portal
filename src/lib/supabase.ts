@@ -1,9 +1,12 @@
 // src/lib/supabase.ts
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-
 function normalizeUrl(v?: string) {
   if (!v) return "";
-  return v.trim().replace(/^"|"$|^'|'$/g, "").replace(/\+$/g, "");
+  return v
+    .trim()
+    .replace(/^"|"$|^'|'$/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[\/.]+$/g, ""); // removes trailing / or .
 }
 
 /**
