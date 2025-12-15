@@ -1,44 +1,42 @@
 // src/lib/supabase.ts
-import { createClient } from "@supabase/supabase-js";
-
-let _server: ReturnType<typeof createClient> | null = null;
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 function normalizeUrl(v?: string) {
   if (!v) return "";
-  return v.trim().replace(/^"|"$/g, "").replace(/\/+$/, "");
+  return v.trim().replace(/^"|"$|^'|'$/g, "").replace(/\+$/g, "");
 }
 
 /**
- * Server-side Supabase client (Service Role)
- * IMPORTANT: no throws at module load; only when called.
+ * ✅ Admin (Service Role) client - BUILD SAFE
+ * Never throws at module load; returns null if env missing/invalid.
  */
-export function createSupabaseServerClient() {
-  if (_server) return _server;
-
+export function getSupabaseAdminSafe(): SupabaseClient | null {
   const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 
-  const serviceKey =
-    (process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.SUPABASE_SERVICE_ROLE ||
-      "").trim();
+  if (!supabaseUrl || !/^https?:\/\/.+/i.test(supabaseUrl) || !serviceKey) return null;
 
-  if (!supabaseUrl) throw new Error("supabaseUrl is required");
-  if (!/^https?:\/\/.+/i.test(supabaseUrl)) {
-    throw new Error("Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL");
-  }
-  if (!serviceKey) throw new Error("supabase service role key is required");
-
-  _server = createClient(supabaseUrl, serviceKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
-
-  return _server;
 }
 
-// Backward-compatible aliases (agar kahin aur use ho rahe hon)
-export const createSupabaseAdminClient = createSupabaseServerClient;
-export const createAdminClient = createSupabaseServerClient;
+/**
+ * ✅ Server (ANON) client - BUILD SAFE
+ * Never throws at module load; returns null if env missing/invalid.
+ */
+export function getSupabaseServerSafe(): SupabaseClient | null {
+  const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
+
+  if (!supabaseUrl || !/^https?:\/\/.+/i.test(supabaseUrl) || !anonKey) return null;
+
+  return createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+// ✅ Backward compatible aliases (taake purana code na tootay)
+export const createSupabaseAdminClient = getSupabaseAdminSafe;
+export const createAdminClient = getSupabaseAdminSafe;
+export const createSupabaseServerClient = getSupabaseServerSafe;
