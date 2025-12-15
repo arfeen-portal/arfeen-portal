@@ -1,11 +1,29 @@
 // src/lib/supabaseClient.ts
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
-
-if (!SUPABASE_URL) {
-  throw new Error("supabaseUrl is required");
+function normalizeUrl(v?: string) {
+  if (!v) return "";
+  return v
+    .trim()
+    .replace(/^"|"$|^'|'$/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[\/.]+$/g, "");
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/**
+ * ✅ Browser/client Supabase client (ANON) - BUILD SAFE
+ * Never throws at module load; returns null if env missing/invalid.
+ */
+export function getSupabaseBrowserClient(): SupabaseClient | null {
+  const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
+
+  if (!supabaseUrl || !/^https?:\/\/.+/i.test(supabaseUrl) || !anonKey) return null;
+
+  return createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  });
+}
+
+// Backward compatible export name (agar kahin purana import use ho raha ho)
+export const supabaseClient = getSupabaseBrowserClient;
