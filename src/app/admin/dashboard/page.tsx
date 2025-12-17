@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { createClient } from "@/lib/supabaseClient";
 
 type BookingStatus = "pending" | "confirmed" | "cancelled";
 
@@ -50,22 +45,23 @@ export default function AdminDashboardPage() {
     const load = async () => {
       setLoading(true);
       setError(null);
+
       try {
+        // ✅ IMPORTANT: create client inside effect (not top-level)
+        const supabase = createClient();
+        if (!supabase) {
+          setError(
+            "Supabase is not configured. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel."
+          );
+          setLoading(false);
+          return;
+        }
+
         // BOOKINGS
         const { data: bookingRows, error: bookingError } = await supabase
           .from("umrah_bookings")
           .select(
-            `
-            id,
-            created_at,
-            status,
-            passengers,
-            umrah_packages:package_id (
-              code,
-              origin_city,
-              date_range
-            )
-          `
+            "id, created_at, status, passengers, umrah_packages:package_id ( code, origin_city, date_range )"
           )
           .order("created_at", { ascending: false })
           .limit(20);
@@ -73,7 +69,7 @@ export default function AdminDashboardPage() {
         if (bookingError) throw bookingError;
 
         const mappedBookings: DashboardBookingRow[] =
-          bookingRows?.map((row: any) => {
+          (bookingRows as any[])?.map((row: any) => {
             const pkg = row.umrah_packages;
             return {
               id: row.id,
@@ -96,15 +92,15 @@ export default function AdminDashboardPage() {
         if (packageError) throw packageError;
 
         const mappedPackages: PackageSummaryRow[] =
-          packageRows?.map((p: any) => ({
+          (packageRows as any[])?.map((p: any) => ({
             id: p.id,
-            code: p.code,
-            origin_city: p.origin_city,
-            date_range: p.date_range,
+            code: p.code ?? null,
+            origin_city: p.origin_city ?? null,
+            date_range: p.date_range ?? null,
           })) ?? [];
 
         setPackages(mappedPackages);
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
         setError("Failed to load dashboard data from Supabase.");
       } finally {
@@ -116,7 +112,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   const bookingStats = useMemo(() => {
-    let total = bookings.length;
+    const total = bookings.length;
     let pending = 0;
     let confirmed = 0;
     let cancelled = 0;
@@ -135,14 +131,11 @@ export default function AdminDashboardPage() {
   const totalPackages = packages.length;
 
   const topPackages = useMemo(() => {
-    // Count bookings per package code
     const map = new Map<string, { code: string; count: number }>();
     for (const b of bookings) {
       if (!b.package_code) continue;
       const key = b.package_code;
-      if (!map.has(key)) {
-        map.set(key, { code: b.package_code, count: 0 });
-      }
+      if (!map.has(key)) map.set(key, { code: key, count: 0 });
       map.get(key)!.count += 1;
     }
     const arr = Array.from(map.values());
@@ -164,6 +157,7 @@ export default function AdminDashboardPage() {
               activity.
             </p>
           </div>
+
           <div className="rounded-full bg-slate-900 px-4 py-2 text-[11px] font-semibold text-slate-100">
             Arfeen Travel &amp; Tours • Super Admin
           </div>
@@ -199,7 +193,7 @@ export default function AdminDashboardPage() {
             <div className="text-[11px] font-semibold text-slate-500 uppercase">
               Pending
             </div>
-            <div className="mt-1 text-2xl font-bold text-amber-600">
+            <div className="mt-1 text-2xl font-bold text-amber-700">
               {bookingStats.pending}
             </div>
           </div>
@@ -208,74 +202,68 @@ export default function AdminDashboardPage() {
             <div className="text-[11px] font-semibold text-slate-500 uppercase">
               Confirmed
             </div>
-            <div className="mt-1 text-2xl font-bold text-emerald-600">
+            <div className="mt-1 text-2xl font-bold text-emerald-700">
               {bookingStats.confirmed}
             </div>
           </div>
         </section>
 
         {/* QUICK LINKS */}
-        <section className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="rounded-2xl border bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-800 mb-2">
-              Quick Actions
-            </h2>
-            <div className="flex flex-wrap gap-2 text-xs">
-              <Link
-                href="/umrah-packages"
-                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700 hover:border-slate-300"
-              >
-                View Packages (Public)
-              </Link>
-              <Link
-                href="/umrah-packages/book"
-                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700 hover:border-slate-300"
-              >
-                Booking Form (Public)
-              </Link>
-              <Link
-                href="/admin/umrah-bookings"
-                className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-semibold text-emerald-700 hover:border-emerald-300"
-              >
-                Manage Bookings
-              </Link>
-              <Link
-                href="/admin/agent-analytics"
-                className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 font-semibold text-sky-700 hover:border-sky-300"
-              >
-                Agent Analytics
-              </Link>
-            </div>
-          </div>
-
-          {/* TOP PACKAGES */}
-          <div className="rounded-2xl border bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-800 mb-2">
-              Top Packages by Bookings (Last 20)
-            </h2>
-            {topPackages.length === 0 ? (
-              <div className="text-xs text-slate-500">
-                No booking data yet.
-              </div>
-            ) : (
-              <ul className="space-y-1 text-xs">
-                {topPackages.map((p) => (
-                  <li
-                    key={p.code}
-                    className="flex items-center justify-between"
-                  >
-                    <span className="font-semibold text-slate-800">
-                      {p.code}
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      {p.count} bookings
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+        <section className="mb-6 rounded-2xl border bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-800 mb-2">
+            Quick Actions
+          </h2>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <Link
+              href="/umrah-packages"
+              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700 hover:border-slate-300"
+            >
+              View Packages (Public)
+            </Link>
+            <Link
+              href="/umrah-packages/book"
+              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700 hover:border-slate-300"
+            >
+              Booking Form (Public)
+            </Link>
+            <Link
+              href="/admin/umrah-bookings"
+              className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-semibold text-emerald-700 hover:border-emerald-300"
+            >
+              Manage Bookings
+            </Link>
+            <Link
+              href="/admin/agent-analytics"
+              className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 font-semibold text-sky-700 hover:border-sky-300"
+            >
+              Agent Analytics
+            </Link>
           </div>
         </section>
+
+        {/* TOP PACKAGES */}
+        <div className="rounded-2xl border bg-white p-4 shadow-sm mb-6">
+          <h2 className="text-sm font-semibold text-slate-800 mb-2">
+            Top Packages by Bookings (Last 20)
+          </h2>
+          {topPackages.length === 0 ? (
+            <div className="text-xs text-slate-500">No booking data yet.</div>
+          ) : (
+            <ul className="space-y-1 text-xs">
+              {topPackages.map((p) => (
+                <li
+                  key={p.code}
+                  className="flex items-center justify-between border-b last:border-b-0 py-1"
+                >
+                  <span className="font-semibold text-slate-800">{p.code}</span>
+                  <span className="text-[11px] text-slate-500">
+                    {p.count} bookings
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         {/* LATEST BOOKINGS TABLE */}
         <section className="rounded-2xl border bg-white shadow-sm overflow-hidden">
@@ -294,13 +282,9 @@ export default function AdminDashboardPage() {
           {error ? (
             <div className="p-6 text-xs text-red-600">{error}</div>
           ) : loading ? (
-            <div className="p-6 text-xs text-slate-500">
-              Loading dashboard data…
-            </div>
+            <div className="p-6 text-xs text-slate-500">Loading dashboard data...</div>
           ) : bookings.length === 0 ? (
-            <div className="p-6 text-xs text-slate-500">
-              No bookings found yet.
-            </div>
+            <div className="p-6 text-xs text-slate-500">No bookings found yet.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-xs md:text-sm">
@@ -326,11 +310,10 @@ export default function AdminDashboardPage() {
                           {b.package_code ?? "(No Code)"}
                         </div>
                         <div className="text-[11px] text-slate-500">
-                          {b.package_origin ?? "-"} ·{" "}
-                          {b.package_dates ?? "-"}
+                          {(b.package_origin ?? "-") + " • " + (b.package_dates ?? "-")}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-[11px]">
+                      <td className="px-3 py-2">
                         <span
                           className={
                             "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold " +
