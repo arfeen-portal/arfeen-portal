@@ -1,5 +1,5 @@
 // src/lib/supabaseClient.ts
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient as supaCreateClient, type SupabaseClient } from "@supabase/supabase-js";
 
 function normalizeUrl(v?: string) {
   if (!v) return "";
@@ -12,17 +12,18 @@ function normalizeUrl(v?: string) {
 
 let _client: SupabaseClient | null = null;
 
-export function getSupabaseBrowserClient(): SupabaseClient | null {
+/**
+ * ✅ SAFE: returns SupabaseClient or null (never throws at import time)
+ */
+export function createClient(): SupabaseClient | null {
   if (_client) return _client;
 
   const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
-  if (!supabaseUrl || !/^https?:\/\/.+/i.test(supabaseUrl) || !anonKey) {
-    return null;
-  }
+  if (!supabaseUrl || !/^https?:\/\/.+/i.test(supabaseUrl) || !anonKey) return null;
 
-  _client = createClient(supabaseUrl, anonKey, {
+  _client = supaCreateClient(supabaseUrl, anonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -34,21 +35,18 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
 }
 
 /**
- * ✅ Lazy + build-safe supabase export
- * - No throw at import/build time
- * - Throws only when actually USED and env missing
+ * ✅ Backward compatible exports
  */
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_target, prop, receiver) {
-    const client = getSupabaseBrowserClient();
+    const client = createClient();
     if (!client) {
       throw new Error(
-        "Supabase browser client not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
+        "Supabase client not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel."
       );
     }
     return Reflect.get(client as any, prop, receiver);
   },
 });
 
-// Optional backward alias
 export const supabaseClient = supabase;
