@@ -1,3 +1,5 @@
+// src/lib/validator.ts
+
 export type ValidatorResult<T> = {
   success: boolean;
   data?: T;
@@ -10,8 +12,14 @@ export function validate<T>(
   errorMessage = "Validation failed"
 ): ValidatorResult<T> {
   if (!validator(data)) {
-    return { success: false, error: errorMessage };
+    return {
+      success: false,
+      error: errorMessage,
+    };
   }
 
-  return { success: true, data };
+  return {
+    success: true,
+    data,
+  };
 }
