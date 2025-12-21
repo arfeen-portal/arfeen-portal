@@ -1,36 +1,38 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabaseAdmin";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-const supabaseAdmin = createAdminClient();
+export async function POST(req: Request) {
+  const supabase = getSupabaseServerClient();
 
-export async function POST(request: Request) {
+  // ❗ Build-time / env missing safety
+  if (!supabase) {
+    return NextResponse.json(
+      { error: "Supabase server client not configured" },
+      { status: 500 }
+    );
+  }
+
   try {
-    const { tripId, memberId } = await request.json();
+    const body = await req.json();
 
-    if (!tripId || !memberId) {
+    const { data, error } = await supabase
+      .from("locator_trips")
+      .insert([body]) // ❗ array form (important)
+      .select()
+      .single();
+
+    if (error) {
       return NextResponse.json(
-        { error: "tripId and memberId are required" },
+        { error: error.message },
         { status: 400 }
       );
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("family_trip_members")
-      .insert({
-        trip_id: tripId,
-        member_id: memberId,
-      })
-      .select("*")
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json({ tripMember: data }, { status: 201 });
-  } catch (err: any) {
-    console.error("trip/join error", err);
+    return NextResponse.json({ data });
+  } catch (err) {
     return NextResponse.json(
-      { error: err.message ?? "Unexpected error" },
-      { status: 500 }
+      { error: "Invalid request payload" },
+      { status: 400 }
     );
   }
 }

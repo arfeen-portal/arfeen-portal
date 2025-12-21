@@ -1,20 +1,24 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // server only
-
-// NEW helper jo hum ne AI modules ke liye use kia
-export function getSupabaseServerClient() {
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Supabase env vars missing');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false }
-  });
+function getEnv(name: string) {
+  const v = process.env[name]
+  return v && v.length > 0 ? v : null
 }
 
-// 🔁 COMPATIBLE naam (takay purane code bhi chal jaayen)
+// ✅ Server-only (service role) client — BUT build-safe
+export function getSupabaseServerClient() {
+  const url = getEnv('NEXT_PUBLIC_SUPABASE_URL')
+  const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY')
+
+  // ❗ build time pe throw mat karo — null return karo
+  if (!url || !serviceKey) return null
+
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false }
+  })
+}
+
+// ✅ Compatible name (tumhare purane imports na tootain)
 export function createSupabaseServerClient() {
-  return getSupabaseServerClient();
+  return getSupabaseServerClient()
 }
