@@ -1,89 +1,123 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-const stripeSecret = process.env.STRIPE_SECRET_KEY!;
-const stripe = new Stripe(stripeSecret, {
-  apiVersion: '2024-06-20' as any
-});
+/**
+ * Build-safe Stripe getter
+ */
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+return new Stripe(key);
+ }
 
-const serverClient = () =>
-  createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false }
-  });
+export async function POST(req: Request) {
+  const supabase = getSupabaseServerClient();
+  const stripe = getStripe();
 
-export async function POST(req: NextRequest) {
+  // ✅ build-time safety
+  if (!supabase || !stripe) {
+    return NextResponse.json(
+      { error: "Payment service not configured" },
+      { status: 500 }
+    );
+  }
+
   try {
-    const supabase = serverClient();
-    const { invoiceId, tenantId } = await req.json();
+    const body = await req.json();
+    const { invoiceId, tenantId } = body;
 
-    // 1) Load invoice
-    const { data: invoice, error } = await supabase
-      .from('invoices')
-      .select('*')
-      .eq('id', invoiceId)
+    if (!invoiceId || !tenantId) {
+      return NextResponse.json(
+        { error: "invoiceId and tenantId are required" },
+        { status: 400 }
+      );
+    }
+
+    // 1️⃣ Load invoice
+    const { data: invoice, error: invoiceError } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("id", invoiceId)
       .single();
 
-    if (error || !invoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    if (invoiceError || !invoice) {
+      return NextResponse.json(
+        { error: "Invoice not found" },
+        { status: 404 }
+      );
     }
 
-    if (invoice.status === 'paid') {
-      return NextResponse.json({ error: 'Invoice already paid' }, { status: 400 });
+    if (invoice.status === "paid") {
+      return NextResponse.json(
+        { error: "Invoice already paid" },
+        { status: 400 }
+      );
     }
 
-    const amount = invoice.total_billing; // in billing currency
-    const currency = invoice.billing_currency.toLowerCase(); // 'sar', 'pkr', etc.
+    // 2️⃣ Amount handling (Stripe requires smallest unit)
+    const amount = Math.round(
+      Number(invoice.total_amount) * 100
+    );
 
-    // Stripe amount should be in smallest unit (e.g. cents). 
-    // For SAR/PKR with 2 decimals: multiply by 100
-    const stripeAmount = Math.round(Number(amount) * 100);
-
-    // 2) Create checkout session
+    // 3️⃣ Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/payments/success?invoiceId=${invoiceId}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/payments/cancel?invoiceId=${invoiceId}`,
+      mode: "payment",
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/payments/success?invoiceId=${invoice.id}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/payments/cancel?invoiceId=${invoice.id}`,
       line_items: [
         {
           quantity: 1,
           price_data: {
-            currency,
-            unit_amount: stripeAmount,
+            currency: invoice.billing_currency ?? "usd",
+            unit_amount: amount,
             product_data: {
-              name: `Invoice ${invoiceId}`,
-              description: invoice.booking_reference || 'Arfeen Travel Booking'
-            }
-          }
-        }
+              name: `Invoice #${invoice.id}`,
+              description: invoice.booking_reference
+                ? `Booking Ref: ${invoice.booking_reference}`
+                : "Arfeen Travel Booking",
+            },
+          },
+        },
       ],
       metadata: {
-        invoice_id: invoiceId,
-        tenant_id: tenantId
-      }
+        invoice_id: invoice.id,
+        tenant_id: tenantId,
+      },
     });
 
-    // 3) Create payment record (initiated)
-    const { error: payError } = await supabase.from('payments').insert({
-      tenant_id: tenantId,
-      invoice_id: invoiceId,
-      gateway: 'stripe',
-      gateway_payment_id: session.id,
-      amount,
-      currency: invoice.billing_currency,
-      status: 'initiated'
-    });
+    // 4️⃣ Create payment record (initiated)
+    const { error: paymentError } = await supabase
+      .from("payments")
+      .insert([
+        {
+          invoice_id: invoice.id,
+          tenant_id: tenantId,
+          gateway: "stripe",
+          gateway_ref: session.id,
+          amount: invoice.total_amount,
+          currency: invoice.billing_currency,
+          status: "initiated",
+        },
+      ]);
 
-    if (payError) {
-      console.error(payError);
+    if (paymentError) {
+      console.error("Payment insert error:", paymentError);
     }
 
-    return NextResponse.json({ checkoutUrl: session.url }, { status: 200 });
+    return NextResponse.json(
+      {
+        checkoutUrl: session.url,
+        invoiceId: invoice.id,
+      },
+      { status: 200 }
+    );
   } catch (err: any) {
-    console.error(err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("Checkout session error:", err);
+    return NextResponse.json(
+      { error: err.message ?? "Unexpected server error" },
+      { status: 500 }
+    );
   }
 }
