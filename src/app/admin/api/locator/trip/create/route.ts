@@ -1,52 +1,38 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabaseAdmin";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
-const supabaseAdmin = createAdminClient();
+export async function POST(req: Request) {
+  const supabase = getSupabaseServerClient();
 
+  // ✅ build-time safety
+  if (!supabase) {
+    return NextResponse.json(
+      { error: "Supabase server client not configured" },
+      { status: 500 }
+    );
+  }
 
-export async function POST(request: Request) {
   try {
-    const { familyCode, title, startsAt, endsAt } = await request.json();
+    const body = await req.json();
 
-    if (!familyCode || !title) {
+    const { data, error } = await supabase
+      .from("locator_trips")
+      .insert([body]) // ❗ array form is MUST
+      .select()
+      .single();
+
+    if (error) {
       return NextResponse.json(
-        { error: "familyCode and title are required" },
+        { error: error.message },
         { status: 400 }
       );
     }
 
-    const { data: family, error: famErr } = await supabaseAdmin
-      .from("families")
-      .select("id")
-      .eq("family_code", familyCode)
-      .single();
-
-    if (famErr || !family) {
-      return NextResponse.json(
-        { error: "Family not found" },
-        { status: 404 }
-      );
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from("family_trips")
-      .insert({
-        family_id: family.id,
-        title,
-        starts_at: startsAt ?? null,
-        ends_at: endsAt ?? null,
-      })
-      .select("*")
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json({ trip: data }, { status: 201 });
-  } catch (err: any) {
-    console.error("trip/create error", err);
+    return NextResponse.json({ data });
+  } catch {
     return NextResponse.json(
-      { error: err.message ?? "Unexpected error" },
-      { status: 500 }
+      { error: "Invalid request payload" },
+      { status: 400 }
     );
   }
 }
