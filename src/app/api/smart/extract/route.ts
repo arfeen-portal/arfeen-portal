@@ -1,45 +1,10 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-/**
- * Build-safe OpenAI client
- */
-function getOpenAI() {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return null;
-
-  return new OpenAI({
-    apiKey: key,
-  });
-}
-
-/**
- * Safely extract plain text from OpenAI response
- */
-function extractTextFromOutput(output: any): string {
-  if (!Array.isArray(output)) return "";
-
-  for (const item of output) {
-    if (item?.type === "message" && Array.isArray(item.content)) {
-      for (const part of item.content) {
-        if (
-          part?.type === "output_text" ||
-          typeof part?.text === "string"
-        ) {
-          return String(part.text ?? "");
-        }
-      }
-    }
-  }
-
-  return "";
-}
-
 export async function POST(req: Request) {
-  const openai = getOpenAI();
+  const apiKey = process.env.OPENAI_API_KEY;
 
-  // ✅ build-time safety
-  if (!openai) {
+  if (!apiKey) {
     return NextResponse.json(
       { ok: false, error: "OpenAI not configured" },
       { status: 500 }
@@ -48,40 +13,42 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
+    const input =
+      body?.text ?? body?.input ?? body?.prompt ?? body?.query ?? null;
 
-    const inputText =
-      body?.text ??
-      body?.input ??
-      body?.prompt ??
-      body?.query ??
-      null;
-
-    if (!inputText || typeof inputText !== "string") {
+    if (!input || typeof input !== "string") {
       return NextResponse.json(
         { ok: false, error: "Missing text in request body" },
         { status: 400 }
       );
     }
 
+    const openai = new OpenAI({ apiKey });
+
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
-      input: inputText,
-      max_output_tokens: 500,
-      metadata: {
-        purpose: "smart-extract",
-      },
+      input,
+      max_output_tokens: 500
     });
 
-    const extractedText = extractTextFromOutput(
-      (response as any).output
-    );
+    let extracted = "";
+    const output = (response as any).output;
 
-    return NextResponse.json({
-      ok: true,
-      data: extractedText || "",
-    });
+    if (Array.isArray(output)) {
+      for (const item of output) {
+        if (item?.type === "message" && Array.isArray(item.content)) {
+          for (const part of item.content) {
+            if (part?.type === "output_text") {
+              extracted = String(part.text || "");
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({ ok: true, data: extracted });
   } catch (err: any) {
-    console.error("Smart extract error:", err);
     return NextResponse.json(
       { ok: false, error: err?.message || "Unknown error" },
       { status: 500 }

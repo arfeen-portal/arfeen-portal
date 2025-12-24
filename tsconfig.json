@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
-    // yahan jo bhi aapka existing options hain unko rehne do
-    "target": "es5",
+    "target": "ES2020",
     "lib": [
       "dom",
       "dom.iterable",
@@ -10,18 +9,21 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": false,
-    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
     "incremental": true,
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./src/*"
+        "src/*"
       ]
     },
     "plugins": [
@@ -32,15 +34,19 @@
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
+    ".next",
+    ".next/types",
+    ".next/dev",
+    "**/.next/**",
     "arfeen-app",
-    "mobile",
-    "arfeen-locator-app"
+    "arfeen-locator-app",
+    "mobile"
   ]
 }
