@@ -1,16 +1,22 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const city = (searchParams.get('city') || 'Makkah') as 'Makkah' | 'Madinah';
-    const dateParam = searchParams.get('date'); // YYYY-MM-DD
 
+    const city = (searchParams.get('city') || 'Makkah') as
+      | 'Makkah'
+      | 'Madinah';
+
+    const dateParam = searchParams.get('date');
     const today = new Date();
-    const date =
-      dateParam ??
-      today.toISOString().slice(0, 10); // default: today
+    const date = dateParam
+      ? dateParam
+      : today.toISOString().slice(0, 10);
 
     const supabase = getSupabaseServerClient();
 
@@ -22,26 +28,23 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
-      // PGRST116 = no rows
       throw error;
     }
 
-    // If no row, generate heuristic forecast
     let forecast = data;
+
     if (!forecast) {
-      const dt = new Date(date);
-      const month = dt.getMonth() + 1;
-      const day = dt.getDay(); // 0=Sun, 5=Fri
+      const d = new Date(date);
+      const month = d.getMonth() + 1;
+      const day = d.getDay();
 
       let baseLevel = 5;
 
-      // Friday bump
       if (day === 5) baseLevel += 2;
-
-      // Ramadan / Hajj-ish months (rough)
       if ([8, 9, 10, 11].includes(month)) baseLevel += 2;
 
       const expected_crowd_level = Math.min(10, baseLevel);
+
       const peak_hours =
         city === 'Makkah'
           ? ['04:00-06:00', '18:00-21:00']
@@ -52,15 +55,15 @@ export async function GET(req: NextRequest) {
         date,
         expected_crowd_level,
         peak_hours,
-        notes: 'Auto heuristic based on weekday + month'
-      } as any;
+        notes: 'Auto heuristic based on weekday + month',
+      };
     }
 
     return NextResponse.json({ success: true, forecast });
   } catch (error: any) {
-    console.error('Crowd forecast error', error);
+    console.error('crowd forecast error', error);
     return NextResponse.json(
-      { success: false, error: error.message ?? 'Unknown error' },
+      { success: false, error: error?.message || 'Unknown error' },
       { status: 500 }
     );
   }

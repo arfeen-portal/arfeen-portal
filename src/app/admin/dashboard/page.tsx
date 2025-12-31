@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabaseClient";
+import { supabase } from '@/lib/supabaseClient';
 
 type BookingStatus = "pending" | "confirmed" | "cancelled";
 
@@ -48,7 +48,8 @@ export default function AdminDashboardPage() {
 
       try {
         // ✅ IMPORTANT: create client inside effect (not top-level)
-        const supabase = createClient();
+        const client = supabase;
+
         if (!supabase) {
           setError(
             "Supabase is not configured. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel."

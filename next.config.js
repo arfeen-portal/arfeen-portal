@@ -2,9 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  experimental: {
-    typedRoutes: false
-  }
+  // ⛔ STOP static generation completely
+  output: 'standalone',
 };
 
 module.exports = nextConfig;
