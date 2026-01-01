@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 
 const BASE_PER_KM: Record<string, number> = {
   sedan: 2.5,      // example SAR/km

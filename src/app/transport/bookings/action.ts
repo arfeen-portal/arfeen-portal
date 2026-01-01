@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { postBookingToAccounts } from "@/lib/accounting/postBooking";
+export const dynamic = "force-dynamic";
 
 // TODO: apne COA se correct UUIDs copy karo
 const TRANSPORT_REVENUE_ACC = "PUT-UUID-4101-HERE";

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-
+export const dynamic = "force-dynamic";
 const REQUIRED_HOTEL_FIELDS = [
   "hotel_name",
   "city",

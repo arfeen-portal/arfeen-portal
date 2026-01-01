@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
+export const dynamic = "force-dynamic";
+
 type PlannerInput = {
   role?: 'customer' | 'agent';
   dates: { checkin: string; checkout: string };

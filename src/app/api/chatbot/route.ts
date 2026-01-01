@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
+export const dynamic = "force-dynamic";
 
 type ChatMessage = {
   role: 'user' | 'assistant';

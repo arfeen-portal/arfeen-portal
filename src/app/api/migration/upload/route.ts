@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
+
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {

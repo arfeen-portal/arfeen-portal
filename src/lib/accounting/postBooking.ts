@@ -2,6 +2,7 @@
 
 // Simple placeholder implementation for now.
 // Future me yahan proper journal entries / ledger posting ayegi.
+export const dynamic = "force-dynamic";
 
 export type PostBookingPayload = any;
 

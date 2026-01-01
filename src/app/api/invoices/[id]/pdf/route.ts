@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 // yahan apne helper imports rakho:
 // import { createAdminClient } from "@/lib/supabase/admin";
 // import { generateInvoicePdf } from "@/lib/pdf/invoices";
+export const dynamic = "force-dynamic";
 
 export async function GET(
   _req: NextRequest,

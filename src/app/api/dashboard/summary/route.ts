@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 // agar tum supabase use karna chaho to ye line rakho
 import { createClient } from "@/lib/supabase/server";
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {

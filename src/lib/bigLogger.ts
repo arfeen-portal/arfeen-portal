@@ -1,5 +1,6 @@
 // src/lib/bugLogger.ts
 import { createSupabaseServerClient } from "./supabase";
+export const dynamic = "force-dynamic";
 
 export type BugPayload = {
   severity?: "error" | "warning" | "info";

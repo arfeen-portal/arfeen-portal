@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+export const dynamic = "force-dynamic";
 // import Stripe from "stripe";  // if you add stripe later
 
 export async function POST(req: NextRequest) {

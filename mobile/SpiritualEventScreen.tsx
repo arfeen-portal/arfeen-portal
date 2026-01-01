@@ -1,7 +1,7 @@
 // mobile/src/screens/SpiritualEventScreen.tsx
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, TextInput, Alert, ScrollView } from "react-native";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../src/lib/supabaseClient";
 
 const EVENT_TYPES = [
   { key: "salah_haram", label: "Salah in Masjid al-Haram" },

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   // Next 16: cookies() may be async; keep it awaited (safe across channels)
   const store = await cookies();

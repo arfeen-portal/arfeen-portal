@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // import { createAdminClient } from "@/lib/supabase/admin";
 // import { sendInvoiceEmail } from "@/lib/email/invoices";
 // etc...
+export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,

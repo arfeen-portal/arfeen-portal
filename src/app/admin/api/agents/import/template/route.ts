@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_req: NextRequest) {
   // Jo columns aap staging mein expect karte hain:
   const header = [

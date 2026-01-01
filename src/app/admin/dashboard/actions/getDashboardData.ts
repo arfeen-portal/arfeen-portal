@@ -2,6 +2,8 @@
 
 import { createClient } from "@/utils/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 export async function getDashboardData() {
   const supabase = await createClient();
 

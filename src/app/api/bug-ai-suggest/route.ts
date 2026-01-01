@@ -1,5 +1,6 @@
 // src/app/api/bug-ai-suggest/route.ts
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const MODEL = "gpt-4o-mini";

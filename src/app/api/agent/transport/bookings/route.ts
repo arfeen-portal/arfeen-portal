@@ -4,6 +4,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET  /api/agent/transport/bookings?agentId=...
  * Simple list of bookings per agent

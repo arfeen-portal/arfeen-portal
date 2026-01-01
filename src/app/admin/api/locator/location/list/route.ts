@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminSafe } from '@/lib/supabaseAdminSafe';
 
+
 export async function GET(req: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdminSafe();

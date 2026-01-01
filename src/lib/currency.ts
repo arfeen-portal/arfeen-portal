@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "./supabase";
+export const dynamic = "force-dynamic";
 
 type CurrencyRateRow = {
   rate: number;

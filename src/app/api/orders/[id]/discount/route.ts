@@ -1,6 +1,7 @@
 // src/app/api/orders/[id]/discount/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 
 type DiscountRequestBody = {
   discountCode?: string;

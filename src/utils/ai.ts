@@ -1,5 +1,6 @@
 // src/utils/ai.ts
 // Simple helper – OpenAI call yahan se kareinge
+export const dynamic = "force-dynamic";
 
 export async function callAI(prompt: string) {
   const apiKey = process.env.OPENAI_API_KEY;

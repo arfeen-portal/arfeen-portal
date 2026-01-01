@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server"; // service-role client (tumhari existing pattern ke mutabiq)
+export const dynamic = "force-dynamic";
 
 export async function createTransportBookingAndPost(formData: FormData) {
   const supabase = await createClient();

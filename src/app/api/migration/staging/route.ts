@@ -1,6 +1,7 @@
 // src/app/api/migration/staging/route.ts
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const supabase = createSupabaseServerClient();

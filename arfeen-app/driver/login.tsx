@@ -1,8 +1,7 @@
-// app/driver/login.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSupabaseAuth } from '../../hooks/useSupabaseAuth';
+import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 
 export default function DriverLoginScreen() {
   const router = useRouter();
@@ -16,7 +15,7 @@ export default function DriverLoginScreen() {
   React.useEffect(() => {
     if (!initialLoading && session) {
       // Already logged in → go to rides
-      router.replace('/driver/rides');
+      router.replace('/driver/rides'as any);
     }
   }, [initialLoading, session]);
 
@@ -24,7 +23,7 @@ export default function DriverLoginScreen() {
     try {
       setLoading(true);
       await signIn(email.trim(), password);
-      router.replace('/driver/rides');
+      router.replace('/driver/rides'as any);
     } catch (error: any) {
       console.error(error);
       Alert.alert('Login failed', error.message ?? 'Please check your credentials');

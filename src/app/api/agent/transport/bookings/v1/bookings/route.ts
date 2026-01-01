@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = "force-dynamic";
+
 async function getAgentFromApiKey(req: Request, supabase: any) {
   const apiKey = req.headers.get('x-api-key');
   if (!apiKey) return null;
