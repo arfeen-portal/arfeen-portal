@@ -2,6 +2,7 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+export const dynamic = "force-dynamic";
 
 // TypeScript ko strict type se bachanay ke liye 'as any' cast use kar rahe hain
 Notifications.setNotificationHandler({

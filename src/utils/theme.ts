@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+export const dynamic = "force-dynamic";
 
 export type BrandConfig = {
   primaryColor: string;
