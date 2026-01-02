@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 export default function NewVehiclePage() {
   const router = useRouter();
   const [name, setName] = useState("");

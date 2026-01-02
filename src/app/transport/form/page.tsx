@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 type FormState = {
   country: string;
   city: string;

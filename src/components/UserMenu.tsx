@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { User } from "@supabase/supabase-js";
-
+export const dynamic = "force-dynamic";
 export default function UserMenu() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);

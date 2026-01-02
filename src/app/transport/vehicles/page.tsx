@@ -1,7 +1,7 @@
 // src/app/transport/vehicles/page.tsx
 
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 type Vehicle = {
   id: string;
   name: string;

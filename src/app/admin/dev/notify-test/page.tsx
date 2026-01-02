@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 export default function NotifyTestPage() {
   const [bookingId, setBookingId] = useState("");
   const [loading, setLoading] = useState(false);

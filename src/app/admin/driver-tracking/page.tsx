@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 type DriverLocation = {
   driver_id: string;
   lat: number;

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-
+export const dynamic = "force-dynamic";
 type UmrahPackageLite = {
   id: string;
   name: string;

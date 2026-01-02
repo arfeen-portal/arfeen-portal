@@ -3,7 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 type FormState = {
   full_name: string;
   phone: string;

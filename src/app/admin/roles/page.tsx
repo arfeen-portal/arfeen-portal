@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 export default async function RolesPage() {
   const { data: roles, error } = await supabase
     .from("portal_roles")

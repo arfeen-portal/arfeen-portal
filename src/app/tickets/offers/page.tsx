@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 export default async function FlightOffersPage() {
   const { data, error } = await supabase
     .from("flight_offers")

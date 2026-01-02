@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 export default async function SalesChartsPage() {
   const { data: daily } = await supabase
     .from("v_transport_sales_daily")

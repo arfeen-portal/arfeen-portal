@@ -1,7 +1,7 @@
 // src/app/transport/routes/page.tsx
 
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 type RouteRow = {
   id: string;
   route_name: string;

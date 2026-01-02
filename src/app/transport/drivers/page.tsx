@@ -1,7 +1,7 @@
 // src/app/transport/drivers/page.tsx
 
 import { supabase } from "@/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 type Driver = {
   id: string;
   full_name: string;

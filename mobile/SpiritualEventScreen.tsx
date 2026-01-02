@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, TextInput, Alert, ScrollView } from "react-native";
 import { supabase } from "../src/lib/supabaseClient";
-
+export const dynamic = "force-dynamic";
 const EVENT_TYPES = [
   { key: "salah_haram", label: "Salah in Masjid al-Haram" },
   { key: "salah_hotel", label: "Salah in Hotel" },

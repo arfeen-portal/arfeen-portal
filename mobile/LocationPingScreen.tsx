@@ -1,9 +1,11 @@
 // @ts-nocheck
+"use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Alert } from "react-native";
-import * as Location from "expo-location";
-import { supabase } from "../lib/supabaseClient";
+import { createClient } from "@/lib/supabaseClient";
+
+export const dynamic = "force-dynamic";
+
+
 
 type Props = {
   pilgrimId: string;
