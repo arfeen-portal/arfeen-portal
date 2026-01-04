@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -42,7 +44,11 @@ export default function GroupTicketBatchDetailPage({
       setLoading(true);
 
       const [batchRes, bookingsRes] = await Promise.all([
-        supabase.from('group_ticket_batches').select('*').eq('id', params.id).single(),
+        supabase
+          .from('group_ticket_batches')
+          .select('*')
+          .eq('id', params.id)
+          .single(),
         supabase
           .from('group_ticket_bookings')
           .select('*')
@@ -66,6 +72,7 @@ export default function GroupTicketBatchDetailPage({
     }
 
     loadAll();
+
     return () => {
       isMounted = false;
     };
@@ -115,14 +122,16 @@ export default function GroupTicketBatchDetailPage({
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">{batch.name}</h1>
           <p className="text-xs text-gray-500">
-            {batch.airline || '—'} · {batch.sector || '—'} ·{' '}
+            {batch.airline || '-'} | {batch.sector || '-'} |{' '}
             {batch.travel_date ? batch.travel_date : 'Date TBD'}
           </p>
         </div>
+
         <div className="flex items-center gap-3">
           <Link
             href={`/group-ticketing/${batch.id}/bookings/new`}
@@ -177,16 +186,12 @@ export default function GroupTicketBatchDetailPage({
         <table className="min-w-full text-xs">
           <thead className="bg-gray-100 text-gray-600">
             <tr>
-              <th className="px-3 py-2 text-left font-medium">Agent</th>
-              <th className="px-3 py-2 text-right font-medium">Passengers</th>
-              <th className="px-3 py-2 text-right font-medium">
-                Cost / ticket
-              </th>
-              <th className="px-3 py-2 text-right font-medium">
-                Sell / ticket
-              </th>
-              <th className="px-3 py-2 text-right font-medium">Total cost</th>
-              <th className="px-3 py-2 text-right font-medium">Total sell</th>
+              <th className="px-3 py-2 text-left">Agent</th>
+              <th className="px-3 py-2 text-right">Passengers</th>
+              <th className="px-3 py-2 text-right">Cost / ticket</th>
+              <th className="px-3 py-2 text-right">Sell / ticket</th>
+              <th className="px-3 py-2 text-right">Total cost</th>
+              <th className="px-3 py-2 text-right">Total sell</th>
             </tr>
           </thead>
           <tbody>
@@ -206,23 +211,26 @@ export default function GroupTicketBatchDetailPage({
                   Number(b.total_cost) ||
                   pax * Number(b.cost_per_ticket ?? 0);
                 const sell =
-                  Number(b.total_sell) || pax * Number(b.sell_price_per_ticket ?? 0);
+                  Number(b.total_sell) ||
+                  pax * Number(b.sell_price_per_ticket ?? 0);
 
                 return (
                   <tr key={b.id} className="border-t">
-                    <td className="px-3 py-2">{b.agent_name || '—'}</td>
+                    <td className="px-3 py-2">
+                      {b.agent_name || '-'}
+                    </td>
                     <td className="px-3 py-2 text-right">{pax}</td>
                     <td className="px-3 py-2 text-right">
-                      {b.cost_per_ticket ?? '—'}
+                      {b.cost_per_ticket ?? '-'}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {b.sell_price_per_ticket ?? '—'}
+                      {b.sell_price_per_ticket ?? '-'}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {cost ? `SAR ${cost.toFixed(0)}` : '—'}
+                      SAR {cost.toFixed(0)}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {sell ? `SAR ${sell.toFixed(0)}` : '—'}
+                      SAR {sell.toFixed(0)}
                     </td>
                   </tr>
                 );
@@ -234,4 +242,3 @@ export default function GroupTicketBatchDetailPage({
     </div>
   );
 }
-
