@@ -1,4 +1,6 @@
-import { supabase } from "@/lib/supabaseClient";
+'use client';
+export const dynamic = 'force-dynamic';
+import { supabaseClient as supabase } from '@/lib/supabaseClient';
 
 type AssignmentRow = {
   id: string;

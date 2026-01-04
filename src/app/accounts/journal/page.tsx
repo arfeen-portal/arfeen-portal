@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseClient";
+import { supabase } from '@/lib/supabaseClient';
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ type JournalRow = {
 const PAGE_SIZE = 20;
 
 export default function JournalPage() {
-  const supabase = createClient(); // ✅ SAFE (may be null at build time)
+ ; // ✅ SAFE (may be null at build time)
 
   const [rows, setRows] = useState<JournalRow[]>([]);
   const [total, setTotal] = useState(0);
