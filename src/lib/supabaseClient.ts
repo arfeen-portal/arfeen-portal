@@ -1,21 +1,23 @@
-import { createClient as supaCreateClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient as supaCreateClient, SupabaseClient } from '@supabase/supabase-js';
 
-/**
- * Client-side Supabase (SAFE)
- * - Never throws at build time
- * - Returns null if env missing
- */
+function normalizeUrl(v?: string) {
+  if (!v) return '';
+  return v.trim().replace(/["'`]/g, '').replace(/\s+/g, '').replace(/\/+$/, '');
+}
+
 let _client: SupabaseClient | null = null;
 
 export function createClient(): SupabaseClient | null {
   if (_client) return _client;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 
-  if (!url || !anonKey) return null;
+  if (!supabaseUrl || !/^https?:\/\//.test(supabaseUrl) || !anonKey) {
+    return null;
+  }
 
-  _client = supaCreateClient(url, anonKey, {
+  _client = supaCreateClient(supabaseUrl, anonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -25,3 +27,15 @@ export function createClient(): SupabaseClient | null {
 
   return _client;
 }
+
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop, receiver) {
+    const client = createClient();
+    if (!client) {
+      throw new Error(
+        'Supabase client not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+      );
+    }
+    return Reflect.get(client as any, prop, receiver);
+  },
+});
