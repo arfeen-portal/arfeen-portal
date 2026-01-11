@@ -1,18 +1,22 @@
-import { createClient } from "@supabase/supabase-js";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js';
 
-let client: SupabaseClient | null = null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export function getSupabaseClient(): SupabaseClient | null {
-  if (client) return client;
+/**
+ * ✅ Client-side (use in "use client")
+ */
+export const supabase = createClient(
+  supabaseUrl,
+  supabaseAnonKey
+);
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    return null; // build-time safe
-  }
-
-  client = createClient(url, anonKey);
-  return client;
-}
+/**
+ * ✅ Server-side (use in server components)
+ */
+export const getSupabaseClient = () => {
+  return createClient(
+    supabaseUrl,
+    supabaseAnonKey
+  );
+};

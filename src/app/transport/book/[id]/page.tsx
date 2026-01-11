@@ -3,6 +3,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 type RouteParams = { id: string };
 
 export default async function BookingDetailPage({

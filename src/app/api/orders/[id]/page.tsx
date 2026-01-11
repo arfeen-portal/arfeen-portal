@@ -1,7 +1,8 @@
 // src/app/admin/orders/[id]/page.tsx
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 async function getSupabase() {
   const store = await cookies();
   return createServerClient(

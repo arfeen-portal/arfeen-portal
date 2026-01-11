@@ -1,5 +1,6 @@
 // src/app/transport/routes/[id]/delete/page.tsx
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default function RouteDeletePage() {
   return (
     <div className="p-6">

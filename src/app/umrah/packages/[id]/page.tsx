@@ -3,7 +3,8 @@
 // NOTE: Agar aapke paas already server-side data fetch ho raha hai,
 // to wahan se "pkg" object bana kar is UI ke andar inject kar sakte hain.
 // Abhi dummy data use ho raha hai.
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function PackageDetailPage() {
   // Dummy data – baad mein DB se replace karna asaan rahega
   const pkg = {

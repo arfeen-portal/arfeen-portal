@@ -1,5 +1,6 @@
 // src/app/admin/vouchers/package/[packageBookingId]/page.tsx
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 type PageProps = {
   params: { packageBookingId: string };
 };

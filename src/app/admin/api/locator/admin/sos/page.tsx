@@ -1,5 +1,6 @@
 // src/app/admin/api/locator/admin/sos/page.tsx
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default function AdminLocatorSOSPage() {
   return (
     <div style={{ padding: 24 }}>

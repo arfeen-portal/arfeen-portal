@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabaseClient";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 type RouteRow = {
   id: string;
   route_name: string;

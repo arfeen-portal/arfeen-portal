@@ -1,5 +1,6 @@
 // src/app/(dashboard)/transport/vouchers/page.tsx
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default function TransportVouchersPage() {
   return (
     <div className="p-6">

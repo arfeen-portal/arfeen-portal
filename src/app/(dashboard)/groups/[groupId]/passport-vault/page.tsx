@@ -4,7 +4,8 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 type PageProps = {
   params: { groupId: string };
 };
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function PassportVaultPage({ params }: PageProps) {
   const supabase = getSupabaseClient();
 

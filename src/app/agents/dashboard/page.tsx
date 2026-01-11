@@ -1,6 +1,7 @@
 // src/app/agents/dashboard/page.tsx
 import { createClient } from "@/utils/supabase/server";
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function AgentDashboardPage() {
   const supabase = createClient();
 

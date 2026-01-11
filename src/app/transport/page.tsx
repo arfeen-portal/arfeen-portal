@@ -1,5 +1,6 @@
 // src/app/transport/page.tsx
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default function TransportPage() {
   return (
     <div className="p-6">

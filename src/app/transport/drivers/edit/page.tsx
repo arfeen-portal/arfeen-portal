@@ -1,5 +1,6 @@
 // src/app/transport/drivers/edit/page.tsx
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default function DriverEditPage() {
   return (
     <div className="p-6">

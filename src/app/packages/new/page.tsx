@@ -1,5 +1,6 @@
 // src/app/packages/new/page.tsx
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import SmartCalculator from "./SmartCalculator";
 
 export default function NewPackagePage() {

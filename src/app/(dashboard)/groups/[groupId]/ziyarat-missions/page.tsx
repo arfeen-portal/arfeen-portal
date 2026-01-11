@@ -4,7 +4,8 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 type PageProps = {
   params: { groupId: string };
 };
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function ZiyaratMissionsPage({ params }: PageProps) {
   const supabase = getSupabaseClient();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";

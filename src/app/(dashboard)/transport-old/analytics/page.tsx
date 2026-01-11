@@ -3,6 +3,7 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 import PageHeader from "@/components/layout/PageHeader";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function TransportAnalyticsPage() {
   const supabase = getSupabaseClient();
