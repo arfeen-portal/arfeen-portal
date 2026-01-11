@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-export const dynamic = "force-dynamic";
 export default function CalculatorForm() {
   const [rules, setRules] = useState(null);
   const [nMak, setNMak] = useState("5");

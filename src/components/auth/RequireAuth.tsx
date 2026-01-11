@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-export const dynamic = "force-dynamic";
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const [checking, setChecking] = useState(true);
   const router = useRouter();

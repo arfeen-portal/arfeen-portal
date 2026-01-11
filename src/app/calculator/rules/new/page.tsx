@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-export const dynamic = "force-dynamic";
 
 type ItemRow = {
   id: number;

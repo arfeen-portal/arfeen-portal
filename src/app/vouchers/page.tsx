@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-export const dynamic = "force-dynamic";
 
 type Voucher = {
   id: string;

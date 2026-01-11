@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-export const dynamic = "force-dynamic";
 export default function DeleteDriverPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();

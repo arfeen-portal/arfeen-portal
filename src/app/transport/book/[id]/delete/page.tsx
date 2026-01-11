@@ -3,7 +3,6 @@
 import { useRouter, useParams } from "next/navigation";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-export const dynamic = "force-dynamic";
 export default function DeleteBookingPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
