@@ -1,8 +1,9 @@
 "use client";
 
+export const dynamic = "force-dynamic";
 import { useEffect, useState, useMemo } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-const supabase = useMemo(() => getSupabaseClient(), []);
+const supabase = getSupabaseClient();
 
 type Agent = {
   id: string;
