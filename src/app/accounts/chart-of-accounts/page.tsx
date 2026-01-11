@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from '../../../utils/supabase/client';
+import { getSupabaseClient } from "@/lib/supabaseClient";
 export const dynamic = "force-dynamic";
 
 type AccountGroupMini = {
@@ -21,7 +21,7 @@ type AccountRow = {
 const PAGE_SIZE = 20;
 
 export default function ChartOfAccountsPage() {
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
 
   const [rows, setRows] = useState<AccountRow[]>([]);
   const [total, setTotal] = useState(0);

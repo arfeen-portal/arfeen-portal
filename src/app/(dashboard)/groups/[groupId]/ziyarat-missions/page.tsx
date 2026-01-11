@@ -1,12 +1,12 @@
 // app/groups/[groupId]/ziyarat-missions/page.tsx
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type PageProps = {
   params: { groupId: string };
 };
 
 export default async function ZiyaratMissionsPage({ params }: PageProps) {
-  const supabase = await createClient();
+  const supabase = getSupabaseClient();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
   const res = await fetch(

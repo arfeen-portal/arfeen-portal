@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import PageHeader from "@/components/layout/PageHeader";
 import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS } from "chart.js/auto";
 export const dynamic = "force-dynamic";
 
 export default function AccountingPage() {
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
 
   const [global, setGlobal] = useState<any>(null);
   const [monthly, setMonthly] = useState<any[]>([]);

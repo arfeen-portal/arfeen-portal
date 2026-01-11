@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 export const dynamic = "force-dynamic";
 
 type Account = {
@@ -19,7 +19,7 @@ type Line = {
 };
 
 export default function NewJournalEntryPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => getSupabaseClient(), []);
   const router = useRouter();
 
   const [entryDate, setEntryDate] = useState<string>(

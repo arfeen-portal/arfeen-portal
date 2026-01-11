@@ -1,11 +1,11 @@
 // src/app/transport/analytics/page.tsx
-import { createClient } from "@/utils/supabase/server";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import PageHeader from "@/components/layout/PageHeader";
 
 export const dynamic = "force-dynamic";
 
 export default async function TransportAnalyticsPage() {
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
 
   // Top routes
   const { data: topRoutes } = await supabase

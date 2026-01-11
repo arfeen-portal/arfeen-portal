@@ -1,13 +1,13 @@
 // app/groups/[groupId]/leaderboard/page.tsx
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type PageProps = {
   params: { groupId: string };
 };
 
 export default async function LeaderboardPage({ params }: PageProps) {
-  const supabase = await createClient();
+  const supabase = getSupabaseClient();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
   const res = await fetch(

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { useEffect, useMemo, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS } from "chart.js/auto";
 
@@ -18,7 +18,7 @@ type MonthlyRow = {
 };
 
 export default function AccountingSummary() {
-  const supabase = createClient();
+  const supabase = useMemo(() => getSupabaseClient(), []);
   const [summary, setSummary] = useState<LedgerSummary | null>(null);
   const [monthly, setMonthly] = useState<MonthlyRow[]>([]);
 

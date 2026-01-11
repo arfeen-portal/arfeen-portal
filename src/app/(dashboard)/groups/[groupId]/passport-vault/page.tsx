@@ -1,12 +1,12 @@
 // app/groups/[groupId]/passport-vault/page.tsx
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type PageProps = {
   params: { groupId: string };
 };
 
 export default async function PassportVaultPage({ params }: PageProps) {
-  const supabase = await createClient();
+  const supabase = getSupabaseClient();
 
   const { data } = await supabase
     .from("passport_vault")

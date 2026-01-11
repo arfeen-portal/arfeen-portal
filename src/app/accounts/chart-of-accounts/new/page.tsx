@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 export const dynamic = "force-dynamic";
 
 type Group = {
@@ -13,7 +13,7 @@ type Group = {
 };
 
 export default function NewAccountPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => getSupabaseClient(), []);
   const router = useRouter();
 
   const [groups, setGroups] = useState<Group[]>([]);

@@ -1,12 +1,12 @@
 // app/groups/[groupId]/safety-dashboard/page.tsx
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type PageProps = {
   params: { groupId: string };
 };
 
 export default async function SafetyDashboardPage({ params }: PageProps) {
-  const supabase = await createClient();
+  const supabase = getSupabaseClient();
 
   const { data: lostFound } = await supabase
     .from("lost_found_events")

@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState, useMemo } from "react";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = useMemo(() => getSupabaseClient(), []);
+
 
 type Agent = {
   id: string;
