@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
+export const revalidate = 0;
 /**
  * GET  /agent/transport/bookings?agentId=...
  * Simple list of bookings per agent

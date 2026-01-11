@@ -2,7 +2,6 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { supabase } from "@/lib/supabaseClient";
-export const dynamic = "force-dynamic";
 type Preset = {
   id: string;
   name: string;
