@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 type AccountGroupMini = {
   name: string | null;

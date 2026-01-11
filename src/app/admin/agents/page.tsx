@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-
 const supabase = useMemo(() => getSupabaseClient(), []);
-
 
 type Agent = {
   id: string;
