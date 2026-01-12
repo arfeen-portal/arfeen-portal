@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -10,7 +11,13 @@ export async function GET(req: Request) {
   const date = searchParams.get("date");
   const pax = Number(searchParams.get("pax") || "1");
 
-  // 👉 Version A: MOCK FARES (local)
+  // ✅ Build-time safety
+  if (!supabase) {
+    // Build ke waqt DB call skip
+    return Response.json([], { status: 200 });
+  }
+
+  // ✅ MOCK DATA (local / safe)
   const mock = [
     {
       airline: "Saudia",
@@ -19,7 +26,7 @@ export async function GET(req: Request) {
       arrive_time: `${date}T06:00:00`,
       price: 950 * pax,
       currency: "SAR",
-      stops: 0
+      stops: 0,
     },
     {
       airline: "Air Blue",
@@ -28,14 +35,14 @@ export async function GET(req: Request) {
       arrive_time: `${date}T10:00:00`,
       price: 820 * pax,
       currency: "SAR",
-      stops: 1
-    }
+      stops: 1,
+    },
   ];
 
-  // 👉 Save to cache (optional)
+  // ✅ Optional DB insert (runtime only)
   for (const f of mock) {
     await supabase.from("live_flight_fares").insert({
-      search_id: crypto.randomUUID(),
+      id: crypto.randomUUID(),
       airline: f.airline,
       flight_no: f.flight_no,
       from_city: from,
@@ -44,7 +51,7 @@ export async function GET(req: Request) {
       arrive_time: f.arrive_time,
       price: f.price,
       currency: f.currency,
-      stops: f.stops
+      stops: f.stops,
     });
   }
 
