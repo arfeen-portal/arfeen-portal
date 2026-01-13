@@ -1,23 +1,27 @@
-import { supabase } from "@/lib/supabaseClient";
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+  // ✅ BUILD-TIME SAFETY (REAL)
+  if (!url || !key) {
+    return NextResponse.json([], { status: 200 });
+  }
+
+  const supabase = createClient(url, key);
+
+  const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const date = searchParams.get("date");
   const pax = Number(searchParams.get("pax") || "1");
 
-  // ✅ BUILD-TIME SAFETY (MOST IMPORTANT)
-  if (!supabase) {
-    // build ke waqt DB skip
-    return Response.json([], { status: 200 });
-  }
-
-  // ✅ MOCK DATA (local / safe)
+  // MOCK DATA
   const mock = [
     {
       airline: "Saudia",
@@ -39,9 +43,9 @@ export async function GET(req: Request) {
     },
   ];
 
-  // ✅ OPTIONAL DB INSERT (runtime only)
+  // OPTIONAL DB INSERT (runtime only)
   for (const f of mock) {
-    const { error } = await supabase.from("live_flight_fares").insert({
+    await supabase.from("live_flight_fares").insert({
       id: crypto.randomUUID(),
       airline: f.airline,
       flight_no: f.flight_no,
@@ -53,12 +57,7 @@ export async function GET(req: Request) {
       currency: f.currency,
       stops: f.stops,
     });
-
-    // runtime error guard
-    if (error) {
-      console.error("Insert error:", error.message);
-    }
   }
 
-  return Response.json(mock);
+  return NextResponse.json(mock);
 }
