@@ -11,9 +11,9 @@ export async function GET(req: Request) {
   const date = searchParams.get("date");
   const pax = Number(searchParams.get("pax") || "1");
 
-  // ✅ Build-time safety
+  // ✅ BUILD-TIME SAFETY (MOST IMPORTANT)
   if (!supabase) {
-    // Build ke waqt DB call skip
+    // build ke waqt DB skip
     return Response.json([], { status: 200 });
   }
 
@@ -39,9 +39,9 @@ export async function GET(req: Request) {
     },
   ];
 
-  // ✅ Optional DB insert (runtime only)
+  // ✅ OPTIONAL DB INSERT (runtime only)
   for (const f of mock) {
-    await supabase.from("live_flight_fares").insert({
+    const { error } = await supabase.from("live_flight_fares").insert({
       id: crypto.randomUUID(),
       airline: f.airline,
       flight_no: f.flight_no,
@@ -53,6 +53,11 @@ export async function GET(req: Request) {
       currency: f.currency,
       stops: f.stops,
     });
+
+    // runtime error guard
+    if (error) {
+      console.error("Insert error:", error.message);
+    }
   }
 
   return Response.json(mock);
