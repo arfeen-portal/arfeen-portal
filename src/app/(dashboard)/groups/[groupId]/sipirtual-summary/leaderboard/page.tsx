@@ -1,24 +1,26 @@
-// app/groups/[groupId]/leaderboard/page.tsx
-import { cookies } from "next/headers";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+// app/(dashboard)/groups/[groupId]/leaderboard/page.tsx
 
 type PageProps = {
   params: { groupId: string };
 };
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export default async function LeaderboardPage({ params }: PageProps) {
-  const supabase = getSupabaseClient();
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
+export default async function LeaderboardPage({ params }: PageProps) {
   const res = await fetch(
-    `${baseUrl}/api/groups/${params.groupId}/leaderboard`,
+    `/api/groups/${params.groupId}/leaderboard`,
     { cache: "no-store" }
   );
+
   const json = await res.json();
 
   if (json.error) {
-    return <div className="p-6 text-red-500">{json.error}</div>;
+    return (
+      <div className="p-6 text-red-500">
+        {json.error}
+      </div>
+    );
   }
 
   const leaderboard = json.leaderboard as {
@@ -29,10 +31,12 @@ export default async function LeaderboardPage({ params }: PageProps) {
 
   return (
     <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-bold mb-2">Ibadat Leaderboard</h1>
-      <p className="text-sm text-gray-500 mb-4">
-        Points: Salah in Haram (10), Salah in Hotel (3), Umrah (40),
-        Tawaf (15), Rawdah (25), Ziyarat (20)
+      <h1 className="text-2xl font-bold">
+        Ziyarat Leaderboard
+      </h1>
+      <p className="text-sm text-gray-500">
+        Points based on Haram (10), Salah in Hotel (3),
+        Umrah (40), Tawaf (15), Rawdah (25), Ziyarat (20)
       </p>
 
       <div className="bg-white rounded-lg shadow border overflow-hidden">
