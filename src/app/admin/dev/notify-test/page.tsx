@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 export default function NotifyTestPage() {
   const [bookingId, setBookingId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export default function NotifyTestPage() {
     try {
       // Example: just a lightweight query to verify client works
       // Aap apna actual logic yahan rakh sakte ho
-      const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from("transport_bookings")
         .select("id,status")
         .eq("id", bookingId)
