@@ -2,6 +2,8 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+
 type FormState = {
   full_name: string;
   phone: string;
@@ -20,6 +22,7 @@ export default function EditDriverPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load driver
   useEffect(() => {
     if (!id) return;
 
@@ -44,16 +47,19 @@ export default function EditDriverPage() {
         notes: data.notes || "",
         is_active: data.is_active ?? true,
       });
+
       setLoading(false);
     };
 
     load();
   }, [id]);
 
+  // Handle input change
   const onChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type, checked } = e.target as any;
+
     setForm((prev) =>
       prev
         ? {
@@ -64,6 +70,7 @@ export default function EditDriverPage() {
     );
   };
 
+  // Save
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form || !id) return;
@@ -74,7 +81,7 @@ export default function EditDriverPage() {
     const { error } = await supabase
       .from("transport_drivers")
       .update({
-        full_name: form.full_name.trim(),
+        full_name: form.full_name.trim() || null,
         phone: form.phone.trim() || null,
         whatsapp: form.whatsapp.trim() || null,
         license_number: form.license_number.trim() || null,
@@ -93,11 +100,11 @@ export default function EditDriverPage() {
   };
 
   if (loading || !form) {
-    return <div className="p-4 text-sm">Loading driver...</div>;
+    return <div className="p-4 text-sm">Loading driver…</div>;
   }
 
   return (
-    <div className="max-w-xl space-y-4 p-6">
+    <div className="max-w-xl space-y-6 p-6">
       <button
         onClick={() => router.push("/transport/drivers")}
         className="rounded border px-3 py-1 text-sm hover:bg-gray-50"
@@ -115,18 +122,18 @@ export default function EditDriverPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded-lg border bg-white p-4 shadow-sm"
+        className="space-y-4 rounded border bg-white p-4 shadow-sm"
       >
         <div>
           <label className="block text-xs font-semibold text-gray-600">
-            Full name *
+            Full name
           </label>
           <input
             name="full_name"
-            className="mt-1 w-full rounded border px-2 py-1 text-sm"
             value={form.full_name}
             onChange={onChange}
             required
+            className="mt-1 w-full rounded border px-3 py-1 text-sm"
           />
         </div>
 
@@ -137,20 +144,21 @@ export default function EditDriverPage() {
             </label>
             <input
               name="phone"
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
               value={form.phone}
               onChange={onChange}
+              className="mt-1 w-full rounded border px-3 py-1 text-sm"
             />
           </div>
+
           <div>
             <label className="block text-xs font-semibold text-gray-600">
               WhatsApp
             </label>
             <input
               name="whatsapp"
-              className="mt-1 w-full rounded border px-2 py-1 text-sm"
               value={form.whatsapp}
               onChange={onChange}
+              className="mt-1 w-full rounded border px-3 py-1 text-sm"
             />
           </div>
         </div>
@@ -161,9 +169,9 @@ export default function EditDriverPage() {
           </label>
           <input
             name="license_number"
-            className="mt-1 w-full rounded border px-2 py-1 text-sm"
             value={form.license_number}
             onChange={onChange}
+            className="mt-1 w-full rounded border px-3 py-1 text-sm"
           />
         </div>
 
@@ -173,10 +181,10 @@ export default function EditDriverPage() {
           </label>
           <textarea
             name="notes"
-            className="mt-1 w-full rounded border px-2 py-1 text-sm"
-            rows={2}
+            rows={3}
             value={form.notes}
             onChange={onChange}
+            className="mt-1 w-full rounded border px-3 py-1 text-sm"
           />
         </div>
 
@@ -200,16 +208,17 @@ export default function EditDriverPage() {
           <button
             type="button"
             onClick={() => router.push("/transport/drivers")}
-            className="rounded border px-3 py-1.5 text-sm"
+            className="rounded border px-3 py-1 text-sm"
           >
             Cancel
           </button>
+
           <button
             type="submit"
             disabled={saving}
             className="rounded bg-black px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save changes"}
+            {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
       </form>
