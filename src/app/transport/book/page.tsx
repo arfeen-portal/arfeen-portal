@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient"; // ✅ correct import
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+const supabase = getSupabaseClient();
+ // ✅ correct import
 
 export const dynamic = "force-dynamic";
 

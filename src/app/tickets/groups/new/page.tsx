@@ -2,7 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+const supabase = getSupabaseClient();
+
 export default function NewGroupTicketPage() {
   const router = useRouter();
 

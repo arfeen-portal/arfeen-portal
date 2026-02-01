@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+const supabase = getSupabaseClient();
+
 import { useRouter } from "next/navigation";
 export default function RuleForm({ existing }: any) {
   const router = useRouter();

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+const supabase = getSupabaseClient();
+
 export default function CalculatorForm() {
   const [rules, setRules] = useState(null);
   const [nMak, setNMak] = useState("5");

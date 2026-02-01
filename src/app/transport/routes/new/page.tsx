@@ -2,7 +2,10 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+const supabase = getSupabaseClient();
+
 export default function NewRoutePage() {
   const router = useRouter();
   const [routeName, setRouteName] = useState("");

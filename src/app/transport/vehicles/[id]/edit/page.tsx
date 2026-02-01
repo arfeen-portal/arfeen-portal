@@ -2,7 +2,10 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+const supabase = getSupabaseClient();
+
 type FormState = {
   name: string;
   vehicle_class: string;

@@ -1,4 +1,7 @@
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+const supabase = getSupabaseClient();
+
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";

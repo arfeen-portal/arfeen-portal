@@ -1,6 +1,9 @@
 // src/app/transport/drivers/page.tsx
 
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+const supabase = getSupabaseClient();
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 type Driver = {

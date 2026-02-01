@@ -1,4 +1,7 @@
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from '@/lib/supabaseClient';
+
+const supabase = getSupabaseClient();
+
 export const dynamic = "force-dynamic";
 export default async function RolesPage() {
   const { data: roles, error } = await supabase
