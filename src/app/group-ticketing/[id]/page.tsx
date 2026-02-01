@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-
+import { getSupabaseClient} from '@/lib/supabaseClient';
+const supabase = getSupabaseClient();
 type BatchRow = {
   id: string;
   name: string;

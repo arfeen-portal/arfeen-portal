@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseClient} from '@/lib/supabaseClient';
+const supabase = getSupabaseClient();
 type UmrahPackageLite = {
   id: string;
   name: string;
