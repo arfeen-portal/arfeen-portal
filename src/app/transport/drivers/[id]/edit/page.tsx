@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import {
+  useEffect,
+  useState,
+  ChangeEvent,
+  FormEvent,
+} from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type FormState = {
   full_name: string;
@@ -14,6 +19,8 @@ type FormState = {
 };
 
 export default function EditDriverPage() {
+  const supabase = getSupabaseClient();
+
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
@@ -22,7 +29,7 @@ export default function EditDriverPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load driver
+  // 🔹 load driver (same logic)
   useEffect(() => {
     if (!id) return;
 
@@ -52,14 +59,13 @@ export default function EditDriverPage() {
     };
 
     load();
-  }, [id]);
+  }, [id, supabase]);
 
-  // Handle input change
+  // 🔹 input change (same logic)
   const onChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type, checked } = e.target as any;
-
     setForm((prev) =>
       prev
         ? {
@@ -70,7 +76,7 @@ export default function EditDriverPage() {
     );
   };
 
-  // Save
+  // 🔹 submit (same logic)
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form || !id) return;
@@ -122,7 +128,7 @@ export default function EditDriverPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded border bg-white p-4 shadow-sm"
+        className="space-y-4 rounded-lg border bg-white p-4 shadow-sm"
       >
         <div>
           <label className="block text-xs font-semibold text-gray-600">
@@ -133,11 +139,11 @@ export default function EditDriverPage() {
             value={form.full_name}
             onChange={onChange}
             required
-            className="mt-1 w-full rounded border px-3 py-1 text-sm"
+            className="mt-1 w-full rounded border px-3 py-2 text-sm"
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-600">
               Phone
@@ -146,7 +152,7 @@ export default function EditDriverPage() {
               name="phone"
               value={form.phone}
               onChange={onChange}
-              className="mt-1 w-full rounded border px-3 py-1 text-sm"
+              className="mt-1 w-full rounded border px-3 py-2 text-sm"
             />
           </div>
 
@@ -158,7 +164,7 @@ export default function EditDriverPage() {
               name="whatsapp"
               value={form.whatsapp}
               onChange={onChange}
-              className="mt-1 w-full rounded border px-3 py-1 text-sm"
+              className="mt-1 w-full rounded border px-3 py-2 text-sm"
             />
           </div>
         </div>
@@ -171,7 +177,7 @@ export default function EditDriverPage() {
             name="license_number"
             value={form.license_number}
             onChange={onChange}
-            className="mt-1 w-full rounded border px-3 py-1 text-sm"
+            className="mt-1 w-full rounded border px-3 py-2 text-sm"
           />
         </div>
 
@@ -184,25 +190,19 @@ export default function EditDriverPage() {
             rows={3}
             value={form.notes}
             onChange={onChange}
-            className="mt-1 w-full rounded border px-3 py-1 text-sm"
+            className="mt-1 w-full rounded border px-3 py-2 text-sm"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2 text-sm">
           <input
-            id="driverActiveEdit"
             type="checkbox"
             name="is_active"
             checked={form.is_active}
             onChange={onChange}
           />
-          <label
-            htmlFor="driverActiveEdit"
-            className="text-xs font-semibold text-gray-600"
-          >
-            Active
-          </label>
-        </div>
+          Active
+        </label>
 
         <div className="flex justify-end gap-2">
           <button
@@ -212,11 +212,10 @@ export default function EditDriverPage() {
           >
             Cancel
           </button>
-
           <button
             type="submit"
             disabled={saving}
-            className="rounded bg-black px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+            className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save changes"}
           </button>

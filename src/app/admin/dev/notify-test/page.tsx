@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 export default function NotifyTestPage() {
+  const supabase = getSupabaseClient();
+
   const [bookingId, setBookingId] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string>("");
@@ -15,7 +17,7 @@ export default function NotifyTestPage() {
     setResult("");
 
     try {
-      // Lightweight test query to verify Supabase client works
+      // Lightweight test query (same as before)
       const { data, error } = await supabase
         .from("transport_bookings")
         .select("id, status")
@@ -25,9 +27,7 @@ export default function NotifyTestPage() {
       if (error) throw error;
 
       setResult(
-        data
-          ? JSON.stringify(data, null, 2)
-          : "No record found"
+        data ? JSON.stringify(data, null, 2) : "No record found"
       );
     } catch (e: any) {
       setResult(e?.message || "Unknown error");
@@ -57,10 +57,10 @@ export default function NotifyTestPage() {
         disabled={loading || !bookingId}
         className="rounded-lg bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
       >
-        {loading ? "Testing..." : "Test"}
+        {loading ? "Testing…" : "Test"}
       </button>
 
-      <pre className="rounded-lg border bg-gray-50 p-3 text-xs overflow-auto">
+      <pre className="rounded-lg border bg-gray-50 p-3 text-sm overflow-auto">
         {result}
       </pre>
     </div>
