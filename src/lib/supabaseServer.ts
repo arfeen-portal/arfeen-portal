@@ -1,35 +1,29 @@
 import { createClient } from "@supabase/supabase-js";
 
-/**
- * Safe env getter (build-time friendly)
- */
-function getEnv(name: string): string | null {
+function getEnv(name: string): string {
   const v = process.env[name];
-  return v && v.length > 0 ? v : null;
+  if (!v) {
+    throw new Error(`Missing env: ${name}`);
+  }
+  return v;
 }
 
 /**
- * ✅ Server-only Supabase client
- * ✅ Build-safe (never throws during build)
- */
-export function getSupabaseServerClient() {
-  const url = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-
-  // ❗ build time pe error throw nahi karna
-  if (!url || !serviceKey) return null;
-
-  return createClient(url, serviceKey, {
-    auth: {
-      persistSession: false,
-    },
-  });
-}
-
-/**
- * ✅ Backward compatibility
- * (tumhare purane imports break na hon)
+ * Server-only Supabase client
+ * NEVER returns null
+ * Fails fast with clear error
  */
 export function createSupabaseServerClient() {
-  return getSupabaseServerClient();
+  const url = getEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!key) {
+    throw new Error("Missing Supabase service/anon key");
+  }
+
+  return createClient(url, key, {
+    auth: { persistSession: false },
+  });
 }

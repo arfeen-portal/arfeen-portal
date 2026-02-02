@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   try {
     const ctx = await withAgent(req);
     const supabase = getSupabaseAdminClient();
-    if (!supabase) {
+    {
       return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
     }
 

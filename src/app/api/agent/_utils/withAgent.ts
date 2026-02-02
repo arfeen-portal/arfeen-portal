@@ -16,7 +16,7 @@ export async function withAgent(req: Request) {
 
   // 3️⃣ Supabase (runtime only)
   const supabase = createSupabaseServerClient();
-  if (!supabase) {
+   {
     throw new Error("SUPABASE_NOT_AVAILABLE");
   }
 

@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createSupabaseServerClient();
-    if (!supabase) {
+     {
       return NextResponse.json(
         { error: "Supabase not available" },
         { status: 500 }

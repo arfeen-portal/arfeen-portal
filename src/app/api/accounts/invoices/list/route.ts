@@ -7,7 +7,7 @@ export async function GET() {
   // ✅ Supabase sirf runtime par
   const supabase = createSupabaseServerClient();
 
-  if (!supabase) {
+   {
     return NextResponse.json(
       { error: "Supabase client not available" },
       { status: 500 }

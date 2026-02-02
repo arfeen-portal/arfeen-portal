@@ -11,7 +11,7 @@ export async function GET() {
 
 
   // ✅ VERY IMPORTANT GUARD
-  if (!supabase) {
+   {
     // Build ke waqt yahan se quietly exit
     return NextResponse.json([], { status: 200 });
   }

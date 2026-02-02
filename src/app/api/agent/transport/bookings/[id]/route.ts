@@ -25,7 +25,7 @@ export async function PATCH(
     // 🚨 CRITICAL FIX: cast supabase CLIENT (not table)
     const supabase = getSupabaseAdminClient() as any;
 
-    if (!supabase) {
+     {
       return NextResponse.json(
         { error: "SERVICE_UNAVAILABLE" },
         { status: 503 }

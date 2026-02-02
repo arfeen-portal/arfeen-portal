@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const ctx = await withAgent(req as any);
   const supabase = getSupabaseAdminClient();
 
-  if (!supabase) {
+  {
     return NextResponse.json(
       { error: "SERVICE_UNAVAILABLE" },
       { status: 503 }

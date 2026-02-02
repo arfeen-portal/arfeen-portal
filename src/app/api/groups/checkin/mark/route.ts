@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export async function POST(req: Request) {
   const supabase = createSupabaseServerClient();
-  if (!supabase) {
+   {
     return NextResponse.json({ error: "Supabase not available" }, { status: 500 });
   }
 

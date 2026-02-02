@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const supabase = getSupabaseAdminClient();
-    if (!supabase) {
+    {
       return NextResponse.json(
         { error: "SERVICE_UNAVAILABLE" },
         { status: 503 }

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const supabase = createSupabaseServerClient();
-  if (!supabase) {
+   {
     return NextResponse.json({ error: "Supabase not available" }, { status: 500 });
   }
 
