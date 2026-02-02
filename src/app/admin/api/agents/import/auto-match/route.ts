@@ -1,36 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
-
 export const runtime = "nodejs";
 
-// ---------------- helpers ----------------
+/* ---------------- helpers ---------------- */
+
 function normalizeUrl(v?: string) {
   if (!v) return "";
-  return v.trim().replace(/^"|"$/g, "").replace(/\/+$/, "");
+  return v.trim().replace(/^['"]$/g, "").replace(/\/+$/, "");
 }
 
 /**
- * ✅ SAFE: no throw (build safe)
- * Returns null if env missing/invalid.
+ * SAFE admin client
+ * - no throw
+ * - returns null if env missing
+ * - build safe
  */
 function getSupabaseAdminSafe() {
   const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 
-  if (!supabaseUrl || !/^https?:\/\//i.test(supabaseUrl) || !serviceKey) return null;
+  if (
+    !supabaseUrl ||
+    !/^https?:\/\//.test(supabaseUrl) ||
+    !serviceKey
+  ) {
+    return null;
+  }
 
-  return createClient(supabaseUrl, serviceKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
+  // ✅ FINAL PATTERN — no args, no await
+  const supabase = createSupabaseServerClient();
+  return supabase;
 }
 
-// Simple phonetic-ish normalize
+/* -------- name normalization & similarity -------- */
+
 function normalizeName(input: string): string {
   if (!input) return "";
   const cleaned = input
@@ -42,7 +47,6 @@ function normalizeName(input: string): string {
   return cleaned.replace(/(.)\1+/g, "$1");
 }
 
-// Levenshtein
 function levenshtein(a: string, b: string): number {
   if (a === b) return 0;
   if (!a.length) return b.length;
@@ -65,23 +69,22 @@ function levenshtein(a: string, b: string): number {
       }
     }
   }
-
   return matrix[b.length][a.length];
 }
 
 function similarity(a: string, b: string): number {
-  const nA = normalizeName(a);
-  const nB = normalizeName(b);
-  const maxLen = Math.max(nA.length, nB.length);
+  const na = normalizeName(a);
+  const nb = normalizeName(b);
+  const maxLen = Math.max(na.length, nb.length);
   if (!maxLen) return 0;
-  const dist = levenshtein(nA, nB);
+  const dist = levenshtein(na, nb);
   return (maxLen - dist) / maxLen;
 }
 
-// ---------------- route ----------------
+/* ---------------- route ---------------- */
+
 export async function POST(req: NextRequest) {
   try {
-    // ✅ IMPORTANT: safe client (no build-time crash)
     const supabaseAdmin = getSupabaseAdminSafe();
     if (!supabaseAdmin) {
       return NextResponse.json(
@@ -102,12 +105,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // staging rows (unmatched only)
-    const { data: stagingRows, error: stagingError } = await (supabaseAdmin as any)
-      .from("agent_import_staging")
-      .select("id, raw_name, raw_email")
-      .eq("batch_id", batchId)
-      .is("matched_agent_id", null);
+    /* staging rows (unmatched only) */
+    const { data: stagingRows, error: stagingError } =
+      await (supabaseAdmin as any)
+        .from("agent_import_staging")
+        .select("id, raw_name, raw_email")
+        .eq("batch_id", batchId)
+        .is("matched_agent_id", null);
 
     if (stagingError) {
       console.error(stagingError);
@@ -121,9 +125,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ matched: 0, total: 0 });
     }
 
-    const { data: agents, error: agentsError } = await (supabaseAdmin as any)
-      .from("agents")
-      .select("id, name, email");
+    /* agents */
+    const { data: agents, error: agentsError } =
+      await (supabaseAdmin as any)
+        .from("agents")
+        .select("id, name, email");
 
     if (agentsError) {
       console.error(agentsError);
@@ -134,7 +140,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (!agents || agents.length === 0) {
-      return NextResponse.json({ matched: 0, total: stagingRows.length });
+      return NextResponse.json({
+        matched: 0,
+        total: stagingRows.length,
+      });
     }
 
     type MatchUpdate = {
@@ -167,7 +176,7 @@ export async function POST(req: NextRequest) {
           id: row.id,
           matched_agent_id: bestAgentId,
           match_score: Number(bestScore.toFixed(3)),
-          match_method: "levenshtein+normalize",
+          match_method: "levenshtein-normalize",
           status: "suggested",
         });
       }
@@ -187,7 +196,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ✅ audit log (INSERT ARRAY)
+    /* audit log */
     const auditRow = {
       tenant_id: null,
       user_id: null,
@@ -205,8 +214,8 @@ export async function POST(req: NextRequest) {
       .insert([auditRow]);
 
     if (auditError) {
-      console.error("audit insert error:", auditError);
-      // audit fail ho to bhi main response success rehne do
+      console.error("audit insert error", auditError);
+      // audit fail does NOT block main response
     }
 
     return NextResponse.json({

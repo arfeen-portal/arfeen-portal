@@ -2,7 +2,7 @@
 // @ts-nocheck
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -12,7 +12,7 @@ export const revalidate = 0;
  * Simple list of bookings per agent
  */
 export async function GET(req: Request) {
-  const supabase = await createClient();
+const supabase = createSupabaseServerClient();
   const url = new URL(req.url);
   const agentId = url.searchParams.get("agentId");
 
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
  * Body: JSON with booking fields
  */
 export async function POST(req: Request) {
-  const supabase = await createClient();
+  const supabase = createSupabaseServerClient();
 
   const body = await req.json().catch(() => null);
 

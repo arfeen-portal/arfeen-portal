@@ -1,22 +1,21 @@
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+type ResolveTenantInput = {
+  domain?: string;
+  bundleId?: string;
+  agentCode?: string;
+};
 
 export async function resolveTenant({
   domain,
   bundleId,
   agentCode,
-}: {
-  domain?: string;
-  bundleId?: string;
-  agentCode?: string;
-}) {
-  let tenant;
+}: ResolveTenantInput) {
+  const supabase = createSupabaseServerClient();
 
-  // 1️⃣ DOMAIN (WEB)
+  let tenant: any = null;
+
+  // 🌐 DOMAIN (WEB)
   if (domain) {
     const { data } = await supabase
       .from("tenant_domains")
@@ -27,7 +26,7 @@ export async function resolveTenant({
     tenant = data?.platform_tenants;
   }
 
-  // 2️⃣ BUNDLE ID (APP)
+  // 📦 BUNDLE ID (APP)
   if (!tenant && bundleId) {
     const { data } = await supabase
       .from("tenant_apps")
@@ -38,7 +37,7 @@ export async function resolveTenant({
     tenant = data?.platform_tenants;
   }
 
-  // 3️⃣ FALLBACK (agent_code)
+  // 🧾 FALLBACK (AGENT CODE)
   if (!tenant && agentCode) {
     const { data } = await supabase
       .from("platform_tenants")
