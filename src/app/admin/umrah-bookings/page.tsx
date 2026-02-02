@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+const supabase = createSupabaseServerClient();
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+
 
 type BookingStatus = "pending" | "confirmed" | "cancelled";
 type RoomType = "sharing" | "quad" | "triple" | "double";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 
 const steps = ["Basic Info", "Company Details"];
@@ -11,10 +11,10 @@ export default function AgentRegisterPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  const supabase = createSupabaseServerClient();
+
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+
  // agar tumhare project me helper file hai to usko use kar sakte ho
 
   const [form, setForm] = useState({
