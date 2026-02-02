@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const supabaseAdmin = getSupabaseServerClient();
-
-  // ✅ build-time safety
-  if (!supabaseAdmin) {
-    return NextResponse.json(
-      { ok: false, error: "Supabase server client not configured" },
-      { status: 500 }
-    );
-  }
-
   try {
+    // ✅ ADMIN / SERVER CLIENT
+    const supabaseAdmin = createSupabaseServerClient();
+
+    // -------- body --------
     const body = await req.json();
     const { name, email, phone } = body;
 
@@ -25,7 +19,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1️⃣ Auth user create (admin)
+    // -------- 1️⃣ AUTH USER CREATE (ADMIN) --------
     const { data: authUser, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email,
@@ -36,7 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error: authError?.message ?? "Failed to create auth user",
+          error: authError?.message || "Failed to create auth user",
         },
         { status: 400 }
       );
@@ -44,7 +38,7 @@ export async function POST(req: Request) {
 
     const userId = authUser.user.id;
 
-    // 2️⃣ public.users insert (role is REQUIRED)
+    // -------- 2️⃣ public.users INSERT (ROLE REQUIRED) --------
     const { error: userError } = await supabaseAdmin
       .from("users")
       .insert([
@@ -64,7 +58,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3️⃣ public.agents insert (tumhara original structure)
+    // -------- 3️⃣ agents INSERT --------
     const { data: agent, error: agentError } = await supabaseAdmin
       .from("agents")
       .insert([
@@ -73,7 +67,7 @@ export async function POST(req: Request) {
           name,
           email,
           phone,
-          billing_currency: "PKR", // default
+          billing_currency: "PKR",
           currency: "PKR",
           is_credit_blocked: false,
           is_active: true,
@@ -91,6 +85,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // -------- SUCCESS --------
     return NextResponse.json(
       {
         ok: true,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as ChatRequestBody;
     const isAgent = body.role === 'agent';
 
-    const supabase = getSupabaseServerClient();
+    const supabase = createSupabaseServerClient();
 
     const {
       data: { user }
