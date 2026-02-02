@@ -1,6 +1,7 @@
 import { withAgent } from "@/app/api/agent/_utils/withAgent";
 import { requireModule } from "@/lib/guards/moduleGuard";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+const supabaseAdmin = getSupabaseAdmin();
 
 export async function PATCH(
   req: Request,

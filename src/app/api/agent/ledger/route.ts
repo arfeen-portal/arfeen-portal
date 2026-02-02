@@ -1,5 +1,7 @@
 import { withAgent } from "@/app/api/agent/_utils/withAgent";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+const supabaseAdmin = getSupabaseAdmin();
+
 
 export async function GET(req: Request) {
   const ctx = await withAgent(req);
