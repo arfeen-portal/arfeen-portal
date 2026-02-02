@@ -1,17 +1,12 @@
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { withTenant } from "@/app/api/_utils/withTenant";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function withAgent(req: Request) {
-  // 1️⃣ Resolve tenant first (LOCKED PATTERN)
+  // 1️⃣ Resolve tenant (LOCKED)
   const tenantCtx = await withTenant(req as any);
 
-  // 2️⃣ Read auth session (Supabase Auth)
+  // 2️⃣ Read auth session
   const cookieStore = cookies();
   const accessToken = cookieStore.get("sb-access-token")?.value;
 
@@ -19,7 +14,13 @@ export async function withAgent(req: Request) {
     throw new Error("UNAUTHENTICATED");
   }
 
-  // 3️⃣ Get user from token
+  // 3️⃣ Supabase (runtime only)
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    throw new Error("SUPABASE_NOT_AVAILABLE");
+  }
+
+  // 4️⃣ Get user from token
   const {
     data: { user },
     error: userError,
@@ -29,7 +30,7 @@ export async function withAgent(req: Request) {
     throw new Error("INVALID_SESSION");
   }
 
-  // 4️⃣ Map user → agent_profiles (tenant-scoped)
+  // 5️⃣ Map user → agent_profiles (tenant scoped)
   const { data: agent } = await supabase
     .from("agent_profiles")
     .select("*")
@@ -42,7 +43,7 @@ export async function withAgent(req: Request) {
     throw new Error("AGENT_NOT_FOUND");
   }
 
-  // 5️⃣ Final context (this is GOLD)
+  // 6️⃣ Final context
   return {
     ...tenantCtx,
     agent_id: agent.id,

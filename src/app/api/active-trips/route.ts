@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+const supabase = createSupabaseServerClient();
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET() {
   // ✅ Build-time safe Supabase client
-  const supabase = createClient();
+
 
   // ✅ VERY IMPORTANT GUARD
   if (!supabase) {

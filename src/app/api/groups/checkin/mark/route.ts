@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export async function POST(req: Request) {
-  const supabase = createClient();
-  const body = await req.json();
 
+export async function POST(req: Request) {
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase not available" }, { status: 500 });
+  }
+
+  const body = await req.json();
   const { group_id, member_id, spot_id } = body;
 
   if (!group_id || !member_id || !spot_id) {
@@ -15,7 +20,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // Already present?
   const { data: existing } = await supabase
     .from("group_checkins")
     .select("id")
@@ -25,18 +29,15 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (!existing) {
-    const { error: insertErr } = await supabase.from("group_checkins").insert({
+    const { error } = await supabase.from("group_checkins").insert({
       group_id,
       spot_id,
       member_id,
       status: "visited",
     });
 
-    if (insertErr) {
-      return NextResponse.json(
-        { error: insertErr.message },
-        { status: 500 }
-      );
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
   }
 

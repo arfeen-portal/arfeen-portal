@@ -1,19 +1,29 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Runtime-safe Supabase admin client
- * ❌ Never create client at module load
- * ✅ Always create inside function
+ * Build-safe env getter
  */
-export function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function getEnv(name: string): string | null {
+  const v = process.env[name];
+  return v && v.length > 0 ? v : null;
+}
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase env vars missing at runtime");
+/**
+ * 🔐 Server-only Supabase ADMIN client
+ * ✅ Build-time SAFE
+ * ✅ Runtime SAFE
+ */
+export function getSupabaseAdminClient(): SupabaseClient | null {
+  const url = getEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+  // ⛔ CRITICAL: build-time par yahin STOP
+  if (!url || !serviceKey) {
+    // ⚠️ DO NOT call createClient here
+    return null;
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
+  return createClient(url, serviceKey, {
     auth: {
       persistSession: false,
     },
@@ -21,9 +31,6 @@ export function getSupabaseAdmin() {
 }
 
 /**
- * Backward compatibility (TEMP)
- * ⚠️ DO NOT USE IN NEW CODE
+ * 🔁 Backward compatibility
  */
-export function createAdminClient() {
-  return getSupabaseAdmin();
-}
+export const getSupabaseAdmin = getSupabaseAdminClient;

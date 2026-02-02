@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       total_price,
     } = body;
 
-    const supabase = createClient();
+    const supabase = createSupabaseServerClient();
 
     const { data, error } = await supabase
       .from("transport_bookings")

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+const supabase = createSupabaseServerClient();
+
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,7 @@ async function getAgentId(req: Request, supabase: any) {
 }
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+  
   const agentId = await getAgentId(req, supabase);
 
   if (!agentId) {

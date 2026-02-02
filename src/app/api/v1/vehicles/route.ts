@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const apiKey = url.searchParams.get("api_key");
 
-  const supabase = createClient();
+  const supabase = createSupabaseServerClient();
 
   const { data: keyRow } = await supabase
     .from("api_keys")

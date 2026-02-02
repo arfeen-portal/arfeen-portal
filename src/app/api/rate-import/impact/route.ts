@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const supabase = createClient();
+   const supabase = createSupabaseServerClient();
   const { searchParams } = new URL(req.url);
   const jobId = searchParams.get("job_id");
 
@@ -78,7 +78,7 @@ export async function GET(req: Request) {
 // Helpers
 
 async function buildHotelImpact(jobId: string, newRates: any[]) {
-  const supabase = createClient();
+ const supabase = createSupabaseServerClient();
 
   let totalNewRows = newRates.length;
   let comparable = 0;
@@ -186,7 +186,7 @@ async function buildHotelImpact(jobId: string, newRates: any[]) {
 }
 
 async function buildFlightImpact(jobId: string, newRates: any[]) {
-  const supabase = createClient();
+   const supabase = createSupabaseServerClient();
 
   let totalNewRows = newRates.length;
   let comparable = 0;

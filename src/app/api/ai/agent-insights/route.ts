@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+const supabase = createSupabaseServerClient();
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "agentId required" }, { status: 400 });
   }
 
-  const supabase = createClient();
+
 
   const { data: kpi, error } = await supabase
     .from("agent_kpis")

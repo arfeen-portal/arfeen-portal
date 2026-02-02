@@ -1,34 +1,24 @@
+import { NextResponse } from "next/server";
 import { withAgent } from "@/app/api/agent/_utils/withAgent";
-import { requireModule } from "@/lib/guards/moduleGuard";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-const supabaseAdmin = getSupabaseAdmin();
+import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const ctx = await withAgent(req);
-  requireModule(ctx, "transport");
+  try {
+    const ctx = await withAgent(req);
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
 
-  const { data } = await supabaseAdmin
-    .from("transport_routes")
-    .select("*")
-    .eq("tenant_id", ctx.tenant_id)
-    .eq("agent_id", ctx.agent_id);
+    const { data, error } = await supabase
+      .from("transport_routes")
+      .select("*")
+      .eq("tenant_id", ctx.tenant_id);
 
-  return Response.json(data ?? []);
-}
+    if (error) throw error;
 
-export async function POST(req: Request) {
-  const ctx = await withAgent(req);
-  requireModule(ctx, "transport");
-
-  const body = await req.json();
-
-  await supabaseAdmin.from("transport_routes").insert({
-    tenant_id: ctx.tenant_id,
-    agent_id: ctx.agent_id,
-    pickup_city: body.pickup_city,
-    dropoff_city: body.dropoff_city,
-    distance_km: body.distance_km,
-  });
-
-  return Response.json({ success: true });
+    return NextResponse.json({ routes: data || [] });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 401 });
+  }
 }

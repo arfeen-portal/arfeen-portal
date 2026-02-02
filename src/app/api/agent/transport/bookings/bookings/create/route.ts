@@ -1,33 +1,36 @@
+import { NextResponse } from "next/server";
 import { withAgent } from "@/app/api/agent/_utils/withAgent";
-import { requireModule } from "@/lib/guards/moduleGuard";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-const supabaseAdmin = getSupabaseAdmin();
+import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-/**
- * GET /api/agent/transport/bookings
- * Agent-wise, tenant-safe bookings list
- */
-export async function GET(req: Request) {
-  const ctx = await withAgent(req);
-  requireModule(ctx, "transport");
+export async function POST(req: Request) {
+  try {
+    const ctx = await withAgent(req as any);
+    const body = await req.json();
 
-  const { data, error } = await supabaseAdmin
-    .from("transport_bookings")
-    .select("*")
-    .eq("tenant_id", ctx.tenant_id)
-    .eq("agent_id", ctx.agent_id)
-    .order("created_at", { ascending: false });
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "SERVICE_UNAVAILABLE" },
+        { status: 503 }
+      );
+    }
 
-  if (error) {
-    console.error("GET transport bookings error:", error);
-    return Response.json(
-      { error: "Failed to load bookings" },
-      { status: 500 }
+    const { error } = await supabase.from("transport_bookings").insert({
+      ...body,
+      tenant_id: ctx.tenant_id,
+      agent_id: ctx.agent_id,
+    });
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e.message ?? "CREATE_FAILED" },
+      { status: 400 }
     );
   }
-
-  return Response.json({ bookings: data ?? [] });
 }

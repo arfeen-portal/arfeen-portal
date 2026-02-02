@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+  const supabase = createSupabaseServerClient();
   const { nfc_tag_id, group_id, member_id, lat, lng } = await req.json();
 
   if (!nfc_tag_id || !group_id || !member_id) {

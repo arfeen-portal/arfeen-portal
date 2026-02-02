@@ -1,14 +1,21 @@
-// src/app/api/accounts/invoices/list/route.ts
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const supabase = createClient();
+  // ✅ Supabase sirf runtime par
+  const supabase = createSupabaseServerClient();
+
+  if (!supabase) {
+    return NextResponse.json(
+      { error: "Supabase client not available" },
+      { status: 500 }
+    );
+  }
 
   const { data, error } = await supabase
-    .from('invoices')
+    .from("invoices")
     .select(`
       id,
       invoice_number,
@@ -21,11 +28,14 @@ export async function GET() {
       customers:customer_id ( full_name ),
       agents:agent_id ( name )
     `)
-    .order('issued_at', { ascending: false });
+    .order("issued_at", { ascending: false });
 
   if (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to fetch invoices' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch invoices" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ items: data ?? [] });
