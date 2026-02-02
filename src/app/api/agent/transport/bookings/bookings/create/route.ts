@@ -1,49 +1,32 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { withAgent } from "@/app/api/agent/_utils/withAgent";
+import { requireModule } from "@/lib/guards/moduleGuard";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-async function getAgentFromApiKey(req: Request, supabase: any) {
-  const apiKey = req.headers.get('x-api-key');
-  if (!apiKey) return null;
+/**
+ * GET /api/agent/transport/bookings
+ * Agent-wise, tenant-safe bookings list
+ */
+export async function GET(req: Request) {
+  const ctx = await withAgent(req);
+  requireModule(ctx, "transport");
 
-  const { data, error } = await supabase
-    .from('agent_api_keys')
-    .select('agent_id, is_active')
-    .eq('api_key', apiKey)
-    .maybeSingle();
-
-  if (error || !data || !data.is_active) return null;
-  return data.agent_id;
-}
-
-export async function POST(req: Request) {
-  const supabase = createClient();
-
-  // 🔴 Yahan fix:
-  const agentId = await getAgentFromApiKey(req, supabase);
-
-  if (!agentId) {
-    return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
-  }
-
-  const body = await req.json();
-
-  const { data, error } = await supabase
-    .from('transport_bookings')
-    .insert([
-      {
-        agent_id: agentId,
-        ...body,
-      },
-    ])
-    .select()
-    .single();
+  const { data, error } = await supabaseAdmin
+    .from("transport_bookings")
+    .select("*")
+    .eq("tenant_id", ctx.tenant_id)
+    .eq("agent_id", ctx.agent_id)
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Booking create failed' }, { status: 500 });
+    console.error("GET transport bookings error:", error);
+    return Response.json(
+      { error: "Failed to load bookings" },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({ booking: data });
+  return Response.json({ bookings: data ?? [] });
 }
