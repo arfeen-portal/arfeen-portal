@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
+
 import type { Database } from '@/lib/database.types';
 import Link from 'next/link';
 
 // ----- Supabase client (browser) -----
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createSupabaseServerClient();
+const supabase = supabaseClient;
+
 
 type Invoice = Database['public']['Tables']['invoices']['Row'];
 

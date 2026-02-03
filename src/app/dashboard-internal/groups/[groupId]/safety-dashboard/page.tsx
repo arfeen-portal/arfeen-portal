@@ -1,4 +1,5 @@
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
+
 
 type PageProps = {
   params: { groupId: string };
@@ -6,7 +7,8 @@ type PageProps = {
 
 export default async function SafetyDashboardPage({ params }: PageProps) {
   // ✅ SAFE server client (no env access here)
-  const supabase = createSupabaseServerClient();
+  const supabase = supabaseClient;
+
 
   /* LOST & FOUND */
   const { data: lostFound } = await supabase

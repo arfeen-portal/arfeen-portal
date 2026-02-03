@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, context: any) {
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, context: any) {
 
   // ⬇️ Yahan se neeche tumhara PURANA code jaisa ka taisa rahega
 
-   const supabase = createSupabaseServerClient();
+   const supabase = supabaseAdminSafe;
   const bookingId = params.id;
 
   const { data, error } = await supabase

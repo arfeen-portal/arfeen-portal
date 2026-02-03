@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
     const { booking_id, driver_id, vehicle_id } = await req.json();
-     const supabase = createSupabaseServerClient();
+     const supabase = supabaseAdminSafe;
 
     const { data, error } = await supabase
       .from("transport_bookings")

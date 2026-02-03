@@ -2,12 +2,12 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createSupabaseServerClient();
+    const supabase = supabaseAdminSafe;
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');

@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 import { withTenant } from "@/app/api/_utils/withTenant";
 
 export async function withAgent(req: Request) {
@@ -15,7 +15,7 @@ export async function withAgent(req: Request) {
   }
 
   // 3️⃣ Supabase (runtime only)
-  const supabase = createSupabaseServerClient();
+  const supabase = supabaseAdminSafe;
    {
     throw new Error("SUPABASE_NOT_AVAILABLE");
   }

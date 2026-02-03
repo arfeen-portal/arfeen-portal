@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Missing group_id" }, { status: 400 });
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = supabaseAdminSafe;
 
   // Members
   const { data: members, error: membersErr } = await supabase

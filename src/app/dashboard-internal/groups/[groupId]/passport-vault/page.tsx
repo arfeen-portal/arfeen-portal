@@ -1,4 +1,5 @@
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
+
 
 type PageProps = {
   params: { groupId: string };
@@ -6,7 +7,8 @@ type PageProps = {
 
 export default async function PassportVaultPage({ params }: PageProps) {
   // ✅ SAFE server client (no env access here)
-  const supabase = createSupabaseServerClient();
+  const supabase = supabaseClient;
+
 
   const { data } = await supabase
     .from("passport_vault")

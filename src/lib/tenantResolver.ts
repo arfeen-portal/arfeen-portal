@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 type ResolveTenantInput = {
   domain?: string;
@@ -11,7 +11,7 @@ export async function resolveTenant({
   bundleId,
   agentCode,
 }: ResolveTenantInput) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabaseAdminSafe;
 
   let tenant: any = null;
 

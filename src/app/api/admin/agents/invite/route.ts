@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
     // ✅ ADMIN / SERVER CLIENT
-    const supabaseAdmin = createSupabaseServerClient();
+    const supabaseAdmin = supabaseAdminSafe;
 
     // -------- body --------
     const body = await req.json();

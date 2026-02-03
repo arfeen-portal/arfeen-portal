@@ -1,14 +1,8 @@
-// src/app/login/LoginCard.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-);
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export default function LoginCard() {
   const [email, setEmail] = useState("");
@@ -20,7 +14,7 @@ export default function LoginCard() {
     e.preventDefault();
     setMsg(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabaseClient.auth.signInWithPassword({
       email,
       password: pass,
     });
@@ -30,30 +24,33 @@ export default function LoginCard() {
       return;
     }
 
-    // IMPORTANT: make the server see the new cookie
     router.refresh();
     router.push("/admin/dashboard");
   }
 
   return (
-    <form onSubmit={onLogin} style={{ maxWidth: 360 }}>
-      <h3>Supplier Login</h3>
+    <form onSubmit={onLogin} className="max-w-md mx-auto">
+      <h2 className="text-xl font-bold mb-4">Login</h2>
+
       <input
+        type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Email"
-        type="email"
         required
       />
+
       <input
+        type="password"
         value={pass}
         onChange={(e) => setPass(e.target.value)}
         placeholder="Password"
-        type="password"
         required
       />
+
       <button type="submit">Login</button>
-      {msg && <p style={{ color: "red" }}>{msg}</p>}
+
+      {msg && <p className="text-red-600">{msg}</p>}
     </form>
   );
 }

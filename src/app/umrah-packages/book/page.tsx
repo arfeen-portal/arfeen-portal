@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
+
 
 type RoomType = "sharing" | "quad" | "triple" | "double";
 type LeadPriority = "low" | "medium" | "high";
@@ -56,7 +57,9 @@ const ADDONS = [
   },
 ];
 
-const supabase = createSupabaseServerClient();
+const supabase = supabaseClient;
+
+
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 

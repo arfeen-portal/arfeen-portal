@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 // // @ts-ignore
 import * as XLSX from "xlsx";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabaseAdminSafe;
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

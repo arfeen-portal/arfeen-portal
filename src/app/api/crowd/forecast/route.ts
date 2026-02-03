@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 
 
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       ? dateParam
       : today.toISOString().slice(0, 10);
 
-    const supabase = createSupabaseServerClient();
+    const supabase = supabaseAdminSafe;
 
 
 

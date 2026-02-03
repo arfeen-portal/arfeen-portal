@@ -1,7 +1,8 @@
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export async function loadTenantConfig(tenant_id: string) {
-  const supabase = createSupabaseServerClient();
+const supabase = supabaseAdminSafe;
+
 
   const [
     { data: modules },

@@ -1,10 +1,10 @@
 // src/app/api/migration/bulk-status/route.ts
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 
 export async function PUT(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabaseAdminSafe;
   const { jobId, ids, status } = (await req.json()) as {
     jobId: string;
     ids: string[];

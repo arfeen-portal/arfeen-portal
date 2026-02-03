@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   try {
     // ✅ SAFE server client
-    const supabase = createSupabaseServerClient();
+    const supabase = supabaseAdminSafe;
 
     const { searchParams } = new URL(req.url);
     const from = searchParams.get("from") || "";

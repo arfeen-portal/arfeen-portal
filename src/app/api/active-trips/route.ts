@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
-const supabase = createSupabaseServerClient();
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+const supabase = supabaseAdminSafe;
 
 
 export const dynamic = "force-dynamic";

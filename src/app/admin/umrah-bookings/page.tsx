@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
-const supabase = createSupabaseServerClient();
+
+const supabase = supabaseClient;
+
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 

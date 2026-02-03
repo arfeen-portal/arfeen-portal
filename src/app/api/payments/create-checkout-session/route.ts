@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ return new Stripe(key);
  }
 
 export async function POST(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabaseAdminSafe;
 
   const stripe = getStripe();
 

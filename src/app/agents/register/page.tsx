@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
+
 
 
 const steps = ["Basic Info", "Company Details"];
@@ -11,7 +12,8 @@ export default function AgentRegisterPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const supabase = createSupabaseServerClient();
+  const supabase = supabaseClient;
+
 
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
