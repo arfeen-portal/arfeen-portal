@@ -16,7 +16,7 @@ type Row = {
 };
 
 export default function AgingReportPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);

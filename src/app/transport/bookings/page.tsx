@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 export const dynamic = 'force-dynamic';
 
 export default async function TransportBookingsPage() {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data: bookings, error } = await supabase
     .from('transport_bookings')

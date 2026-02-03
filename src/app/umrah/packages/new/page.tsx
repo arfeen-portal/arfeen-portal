@@ -11,7 +11,7 @@ interface HotelOption {
 
 export default function NewUmrahPackagePage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const [hotelsMakkah, setHotelsMakkah] = useState<HotelOption[]>([]);
   const [hotelsMadinah, setHotelsMadinah] = useState<HotelOption[]>([]);

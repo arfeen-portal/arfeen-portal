@@ -12,7 +12,7 @@ type UserRow = {
 };
 
 export default function AdminUsersPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
 

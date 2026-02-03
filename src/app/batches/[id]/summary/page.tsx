@@ -5,7 +5,7 @@ interface PageProps {
 }
 
 export default async function BatchSummaryPage({ params }: PageProps) {
-  const supabase = await createClient(); // <-- IMPORTANT: await
+  const supabase = await createServerSupabaseClient(); // <-- IMPORTANT: await
 
   const batchId = params.id;
 

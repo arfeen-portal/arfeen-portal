@@ -1,15 +1,12 @@
-// src/app/agent/transport/bookings/route.ts
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabaseClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-/**
- * GET  /agent/transport/bookings?agentId=...
- * Simple list of bookings per agent
- */
+
 export async function GET(req: Request) {
-  const supabase = await createClient();
+  const supabase = createServerSupabaseClient();
+
   const url = new URL(req.url);
   const agentId = url.searchParams.get("agentId");
 
@@ -24,7 +21,6 @@ export async function GET(req: Request) {
   });
 
   if (error) {
-    console.error("GET bookings error:", error);
     return NextResponse.json(
       { error: "Failed to load bookings" },
       { status: 500 }
@@ -34,13 +30,8 @@ export async function GET(req: Request) {
   return NextResponse.json({ bookings: data ?? [] });
 }
 
-/**
- * POST /agent/transport/bookings
- * Body: JSON with booking fields
- */
 export async function POST(req: Request) {
-  const supabase = await createClient();
-
+  const supabase = createServerSupabaseClient();
   const body = await req.json().catch(() => null);
 
   if (!body) {
@@ -50,11 +41,11 @@ export async function POST(req: Request) {
     );
   }
 
-  // yahan aap apne fields rakh sakte ho, filhaal generic insert
-  const { error } = await supabase.from("transport_bookings").insert(body);
+  const { error } = await supabase
+    .from("transport_bookings")
+    .insert(body);
 
   if (error) {
-    console.error("Create booking error:", error);
     return NextResponse.json(
       { error: "Failed to create booking" },
       { status: 500 }

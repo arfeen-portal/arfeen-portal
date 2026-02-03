@@ -6,7 +6,7 @@ function generateKey() {
 }
 
 export default async function ApiKeysPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const { data: keys } = await supabase
     .from("api_keys")

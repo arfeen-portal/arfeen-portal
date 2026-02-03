@@ -19,7 +19,7 @@ type Branch = {
 };
 
 export default function BranchPLPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const [branchId, setBranchId] = useState<string>("");
   const [branches, setBranches] = useState<Branch[]>([]);

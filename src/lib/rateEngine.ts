@@ -1,7 +1,7 @@
-import { createClient } from "@/utils/supabase/server";
+import { createServerSupabaseClient } from "@/utils/supabase/server";
 export const dynamic = "force-dynamic";
 
-const supabase = createClient();
+const supabase = createServerSupabaseClient();
 
 export async function getHotelRates(city: string, checkIn: string, checkOut: string) {
   const { data, error } = await supabase

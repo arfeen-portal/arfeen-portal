@@ -1,9 +1,9 @@
 // src/app/agents/dashboard/page.tsx
-import { createClient } from "@/utils/supabase/server";
+import { createServerSupabaseClient } from "@/utils/supabase/server";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export default async function AgentDashboardPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const { data } = await supabase
     .from("v_agent_ledger_summary")

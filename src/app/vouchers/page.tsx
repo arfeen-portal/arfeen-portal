@@ -15,7 +15,7 @@ type Voucher = {
 };
 
 export default function VouchersPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const [rows, setRows] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(false);

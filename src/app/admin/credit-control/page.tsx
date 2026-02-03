@@ -17,7 +17,7 @@ type Candidate = {
 };
 
 export default function CreditControlPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
   const [rows, setRows] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);

@@ -16,7 +16,7 @@ type ScoreRow = {
 };
 
 export default function AgentRewardsPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const [rewards, setRewards] = useState<RewardRow[]>([]);
   const [scores, setScores] = useState<ScoreRow[]>([]);

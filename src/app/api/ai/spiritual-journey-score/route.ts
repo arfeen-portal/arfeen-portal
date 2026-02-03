@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 import { callAI } from '../../../../utils/ai';
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
   const body = await req.json();
 
   const { journeyId, userId } = body;

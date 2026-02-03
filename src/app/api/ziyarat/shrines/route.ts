@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 export const dynamic = "force-dynamic";
 export async function GET() {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('places')

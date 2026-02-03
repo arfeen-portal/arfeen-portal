@@ -17,7 +17,7 @@ type TopAgent = {
 };
 
 export default function FinanceDashboardPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const [kpi, setKpi] = useState<KPI | null>(null);
   const [topAgents, setTopAgents] = useState<TopAgent[]>([]);

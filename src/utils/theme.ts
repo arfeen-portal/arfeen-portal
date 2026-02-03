@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { createServerSupabaseClient } from "@/utils/supabase/server";
 export const dynamic = "force-dynamic";
 
 export type BrandConfig = {
@@ -11,7 +11,7 @@ export type BrandConfig = {
 export async function getBrandForHost(
   host: string
 ): Promise<BrandConfig> {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data } = await supabase
     .from("portal_brands")

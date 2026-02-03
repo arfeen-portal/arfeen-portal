@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest, context: any) {
   const { params } = context;
   const { groupId } = params;
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data: pilgrims } = await supabase
     .from("pilgrim_profiles")

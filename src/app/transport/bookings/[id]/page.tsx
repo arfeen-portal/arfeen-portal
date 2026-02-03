@@ -6,7 +6,7 @@ type PageProps = {
 };
 
 export default async function BookingDetailPage({ params }: PageProps) {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
   const bookingId = params.id;
 
   const { data, error } = await supabase

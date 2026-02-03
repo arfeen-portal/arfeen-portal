@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('userId');
 

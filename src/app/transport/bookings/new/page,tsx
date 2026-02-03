@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client';
 
 export default function NewTransportBookingPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const [agents, setAgents] = useState([]);
   const [vehicles, setVehicles] = useState([]);

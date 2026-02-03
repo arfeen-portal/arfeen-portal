@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 

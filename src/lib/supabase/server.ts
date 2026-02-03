@@ -2,7 +2,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 let _client: ReturnType<typeof createSupabaseClient> | null = null;
 
-export function createClient() {
+export function createServerSupabaseClient() {
   if (_client) return _client;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

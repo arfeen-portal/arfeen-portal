@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 
 export default function BatchSummary() {
   const { id } = useParams();
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
   const [summary, setSummary] = useState(null);
 
   const fetchSummary = async () => {

@@ -18,7 +18,7 @@ async function getAgentId(req: Request, supabase: any) {
 }
 
 export async function GET(req: Request) {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
   const agentId = await getAgentId(req, supabase);
 
   if (!agentId) {

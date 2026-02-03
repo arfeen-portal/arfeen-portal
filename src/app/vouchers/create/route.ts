@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
   const body = await req.json();
 
   const voucher_code = "V-" + Date.now();

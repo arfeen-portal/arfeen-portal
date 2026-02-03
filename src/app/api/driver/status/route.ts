@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server';
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
   const body = await req.json();
 
   const { driverId, journeySegmentId, status, meta } = body;

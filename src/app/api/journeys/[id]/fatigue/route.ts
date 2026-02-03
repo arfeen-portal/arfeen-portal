@@ -10,7 +10,7 @@ export async function POST(req: NextRequest, context: any) {
   const { id } = params;
 
   // ⬇️ YAHAN SE NEECHAY AAPKA PURANA CODE BILKUL AS-IS:
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
   const body = await req.json();
   // baaki jo bhi tumne likha hai, sab jaisa hai waisa rehne do
 

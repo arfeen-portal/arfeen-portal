@@ -8,33 +8,8 @@ export const runtime = "nodejs";
 
 function normalizeUrl(v?: string) {
   if (!v) return "";
-  return v.trim().replace(/^['"]$/g, "").replace(/\/+$/, "");
+  return v.trim().replace(/\/$/, "");
 }
-
-/**
- * SAFE admin client
- * - no throw
- * - returns null if env missing
- * - build safe
- */
-function getSupabaseAdminSafe() {
-  const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
-
-  if (
-    !supabaseUrl ||
-    !/^https?:\/\//.test(supabaseUrl) ||
-    !serviceKey
-  ) {
-    return null;
-  }
-
-  // ✅ FINAL PATTERN — no args, no await
-  const supabase = supabaseAdminSafe;
-  return supabase;
-}
-
-/* -------- name normalization & similarity -------- */
 
 function normalizeName(input: string): string {
   if (!input) return "";
@@ -76,7 +51,7 @@ function similarity(a: string, b: string): number {
   const na = normalizeName(a);
   const nb = normalizeName(b);
   const maxLen = Math.max(na.length, nb.length);
-  if (!maxLen) return 0;
+  if (!maxLen) return 1;
   const dist = levenshtein(na, nb);
   return (maxLen - dist) / maxLen;
 }
@@ -85,10 +60,11 @@ function similarity(a: string, b: string): number {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabaseAdmin = getSupabaseAdminSafe();
-    if (!supabaseAdmin) {
+    const supabase = supabaseAdminSafe;
+
+    if (!supabase) {
       return NextResponse.json(
-        { error: "Supabase env not configured" },
+        { error: "Supabase not configured" },
         { status: 500 }
       );
     }
@@ -105,16 +81,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* staging rows (unmatched only) */
-    const { data: stagingRows, error: stagingError } =
-      await (supabaseAdmin as any)
-        .from("agent_import_staging")
-        .select("id, raw_name, raw_email")
-        .eq("batch_id", batchId)
-        .is("matched_agent_id", null);
+    // 1️⃣ Load staging rows (unmatched)
+    const { data: stagingRows, error: stagingError } = await supabase
+      .from("agent_import_staging")
+      .select("id, raw_name, email")
+      .eq("batch_id", batchId)
+      .is("matched_agent_id", null);
 
     if (stagingError) {
-      console.error(stagingError);
       return NextResponse.json(
         { error: "Failed to load staging rows" },
         { status: 500 }
@@ -125,14 +99,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ matched: 0, total: 0 });
     }
 
-    /* agents */
-    const { data: agents, error: agentsError } =
-      await (supabaseAdmin as any)
-        .from("agents")
-        .select("id, name, email");
+    // 2️⃣ Load agents
+    const { data: agents, error: agentsError } = await supabase
+      .from("agents")
+      .select("id, name, email");
 
     if (agentsError) {
-      console.error(agentsError);
       return NextResponse.json(
         { error: "Failed to load agents" },
         { status: 500 }
@@ -146,28 +118,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    type MatchUpdate = {
-      id: string;
-      matched_agent_id: string;
-      match_score: number;
-      match_method: string;
-      status: string;
-    };
+    // 3️⃣ Match logic
+    const updates: any[] = [];
 
-    const updates: MatchUpdate[] = [];
-
-    for (const row of stagingRows as any[]) {
-      const rowName = row?.raw_name || "";
-      if (!rowName) continue;
+    for (const row of stagingRows) {
+      if (!row.raw_name) continue;
 
       let bestScore = 0;
       let bestAgentId: string | null = null;
 
-      for (const agent of agents as any[]) {
-        const score = similarity(rowName, agent?.name || "");
+      for (const agent of agents) {
+        const score = similarity(row.raw_name, agent.name || "");
         if (score > bestScore) {
           bestScore = score;
-          bestAgentId = agent?.id || null;
+          bestAgentId = agent.id;
         }
       }
 
@@ -182,13 +146,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 4️⃣ Apply updates
     if (updates.length > 0) {
-      const { error: updateError } = await (supabaseAdmin as any)
+      const { error: updateError } = await supabase
         .from("agent_import_staging")
         .upsert(updates, { onConflict: "id" });
 
       if (updateError) {
-        console.error(updateError);
         return NextResponse.json(
           { error: "Failed to apply matches" },
           { status: 500 }
@@ -196,8 +160,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /* audit log */
-    const auditRow = {
+    // 5️⃣ Audit log (non-blocking)
+    await supabase.from("agent_import_audit_log").insert({
       tenant_id: null,
       user_id: null,
       batch_id: batchId,
@@ -207,16 +171,7 @@ export async function POST(req: NextRequest) {
         total: stagingRows.length,
         threshold,
       },
-    };
-
-    const { error: auditError } = await (supabaseAdmin as any)
-      .from("agent_import_audit_log")
-      .insert([auditRow]);
-
-    if (auditError) {
-      console.error("audit insert error", auditError);
-      // audit fail does NOT block main response
-    }
+    });
 
     return NextResponse.json({
       matched: updates.length,
@@ -224,7 +179,6 @@ export async function POST(req: NextRequest) {
       threshold,
     });
   } catch (e: any) {
-    console.error("auto-match route error:", e);
     return NextResponse.json(
       { error: e?.message || "Unknown error" },
       { status: 500 }

@@ -6,7 +6,7 @@ import { callAI } from '../../../../utils/ai';
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createServerSupabaseClient();
   const body = await req.json();
 
   const { placeId } = body;

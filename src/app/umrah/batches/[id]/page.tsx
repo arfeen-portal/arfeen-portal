@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 
 export default function BatchDetail() {
   const { id } = useParams();
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const [batch, setBatch] = useState(null);
   const [bookings, setBookings] = useState([]);

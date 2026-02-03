@@ -11,7 +11,7 @@ type PLRow = {
 };
 
 export default function ProfitLossPeriodPage() {
-  const supabase = createClient();
+  const supabase = createServerSupabaseClient();
 
   const [rows, setRows] = useState<PLRow[]>([]);
   const [fromDate, setFromDate] = useState("");
