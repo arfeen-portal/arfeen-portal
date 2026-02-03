@@ -12,7 +12,7 @@ type AuditRow = {
 };
 
 export default async function AuditLogPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = createServersupabaseClient;
 
   const { data: logs, error } = await supabase
     .from("audit_log")

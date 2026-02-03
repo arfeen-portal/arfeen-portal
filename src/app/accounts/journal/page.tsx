@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSupabaseClient } from '@/lib/supabaseClient';
-const supabase = getSupabaseClient();
+import { supabaseClient } from '@/lib/supabaseClient';
+const supabase = supabaseClient;
 
 type Line = {
   debit: number | null;

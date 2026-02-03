@@ -2,8 +2,8 @@
 
 export const dynamic = "force-dynamic";
 import { useEffect, useState, useMemo } from "react";
-import { getSupabaseClient } from "@/lib/supabaseClient";
-const supabase = getSupabaseClient();
+import { supabaseClient } from "@/lib/supabaseClient";
+const supabase = supabaseClient;
 
 type Agent = {
   id: string;

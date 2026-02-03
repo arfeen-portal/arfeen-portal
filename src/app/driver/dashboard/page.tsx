@@ -10,7 +10,7 @@ type Job = {
 };
 
 export default async function DriverDashboardPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = createServersupabaseClient;
 
   // RLS ke through future me sirf current driver ki jobs aayengi
   const { data: jobs, error } = await supabase

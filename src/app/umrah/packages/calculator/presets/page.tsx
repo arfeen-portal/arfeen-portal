@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 type Preset = {
   id: string;

@@ -2,9 +2,9 @@
 
 import { useRouter, useParams } from "next/navigation";
 import { useState } from "react";
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 export default function DeleteBookingPage() {
   const { id } = useParams<{ id: string }>();

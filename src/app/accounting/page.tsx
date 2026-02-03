@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { supabaseClient } from "@/lib/supabaseClient";
 import PageHeader from "@/components/layout/PageHeader";
 import { Bar } from "react-chartjs-2";
 
@@ -23,7 +23,7 @@ ChartJS.register(
 );
 
 export default function AccountingPage() {
-  const supabase = useMemo(() => getSupabaseClient(), []);
+  const supabase = useMemo(() => supabaseClient, []);
 
   const [global, setGlobal] = useState<any>(null);
   const [monthly, setMonthly] = useState<any[]>([]);

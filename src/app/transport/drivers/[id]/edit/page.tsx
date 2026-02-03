@@ -7,7 +7,7 @@ import {
   FormEvent,
 } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type FormState = {
   full_name: string;
@@ -19,7 +19,7 @@ type FormState = {
 };
 
 export default function EditDriverPage() {
-  const supabase = getSupabaseClient();
+  const supabase = supabaseClient;
 
   const { id } = useParams<{ id: string }>();
   const router = useRouter();

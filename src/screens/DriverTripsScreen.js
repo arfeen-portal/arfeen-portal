@@ -8,10 +8,10 @@ import {
   Alert,
 } from 'react-native';
 import * as Location from 'expo-location';
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
 import { useAuth } from '../context/AuthContext';
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 export default function DriverTripsScreen() {
   const { session } = useAuth();
   const [trips, setTrips] = useState([]);

@@ -2,9 +2,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 export const dynamic = "force-dynamic";
 type DriverLocation = {

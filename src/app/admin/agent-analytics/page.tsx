@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type BookingStatus = "pending" | "confirmed" | "cancelled";
 
@@ -25,7 +25,7 @@ interface AgentStats {
 }
 
 export default function AgentAnalyticsPage() {
-  const supabase = useMemo(() => getSupabaseClient(), []);
+  const supabase = useMemo(() => supabaseClient, []);
 
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);

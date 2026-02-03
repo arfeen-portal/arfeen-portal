@@ -1,8 +1,8 @@
 // src/app/transport/vehicles/page.tsx
 
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

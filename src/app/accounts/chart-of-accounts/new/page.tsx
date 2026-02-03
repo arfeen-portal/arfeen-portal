@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type Group = {
   id: string;
@@ -12,7 +12,7 @@ type Group = {
 };
 
 export default function NewAccountPage() {
-  const supabase = useMemo(() => getSupabaseClient(), []);
+  const supabase = useMemo(() => supabaseClient, []);
   const router = useRouter();
 
   const [groups, setGroups] = useState<Group[]>([]);

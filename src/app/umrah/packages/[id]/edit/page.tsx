@@ -1,8 +1,8 @@
 // src/app/umrah/packages/[id]/edit/page.tsx
 
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 import UmrahPackageForm from "@/components/umrah/UmrahPackageForm";
 import { notFound } from "next/navigation";

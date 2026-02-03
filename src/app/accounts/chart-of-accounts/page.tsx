@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type AccountGroupMini = {
   name: string | null;
@@ -20,7 +20,7 @@ type AccountRow = {
 const PAGE_SIZE = 20;
 
 export default function ChartOfAccountsPage() {
-  const supabase = getSupabaseClient();
+  const supabase = supabaseClient;
 
   const [rows, setRows] = useState<AccountRow[]>([]);
   const [total, setTotal] = useState(0);

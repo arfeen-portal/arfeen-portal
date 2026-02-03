@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/utils/supabase/server";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const supabase = createServerSupabaseClient();
+  const supabase = createServersupabaseClient;
   const body = await req.json();
 
   const {

@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { getSupabaseClient } from '@/lib/supabaseClient';
-const supabase = getSupabaseClient();
+import { supabaseClient } from '@/lib/supabaseClient';
+const supabase = supabaseClient;
 type BookingStatus = "pending" | "confirmed" | "cancelled";
 
 interface DashboardBookingRow {

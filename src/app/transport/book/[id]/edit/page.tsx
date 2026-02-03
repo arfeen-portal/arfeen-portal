@@ -2,9 +2,9 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 type FormState = {
   country: string;

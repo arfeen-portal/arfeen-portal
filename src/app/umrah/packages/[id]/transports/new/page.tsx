@@ -1,6 +1,6 @@
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 import { notFound } from "next/navigation";
 import UmrahPackageTransportForm from "@/components/umrah/UmrahPackageTransportForm";

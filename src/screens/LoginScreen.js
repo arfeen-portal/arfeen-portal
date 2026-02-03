@@ -7,9 +7,9 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');

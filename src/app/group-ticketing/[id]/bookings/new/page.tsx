@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseClient} from '@/lib/supabaseClient';
-const supabase = getSupabaseClient();
+import { supabaseClient} from '@/lib/supabaseClient';
+const supabase = supabaseClient;
 export const dynamic = "force-dynamic";
 export default function NewGroupTicketBookingPage({
   params,
