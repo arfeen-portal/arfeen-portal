@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Missing group_id" }, { status: 400 });
   }
 
-  const supabase = createClient();
+   const supabase = createSupabaseServerClient();
 
   // 1) Fetch certificates
   const { data: certs, error: certErr } = await supabase

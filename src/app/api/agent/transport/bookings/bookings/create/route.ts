@@ -1,49 +1,36 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from "next/server";
+import { withAgent } from "@/app/api/agent/_utils/withAgent";
+import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
-
-async function getAgentFromApiKey(req: Request, supabase: any) {
-  const apiKey = req.headers.get('x-api-key');
-  if (!apiKey) return null;
-
-  const { data, error } = await supabase
-    .from('agent_api_keys')
-    .select('agent_id, is_active')
-    .eq('api_key', apiKey)
-    .maybeSingle();
-
-  if (error || !data || !data.is_active) return null;
-  return data.agent_id;
-}
+export const revalidate = 0;
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+  try {
+    const ctx = await withAgent(req as any);
+    const body = await req.json();
 
-  // 🔴 Yahan fix:
-  const agentId = await getAgentFromApiKey(req, supabase);
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "SERVICE_UNAVAILABLE" },
+        { status: 503 }
+      );
+    }
 
-  if (!agentId) {
-    return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
+    const { error } = await supabase.from("transport_bookings").insert({
+      ...body,
+      tenant_id: ctx.tenant_id,
+      agent_id: ctx.agent_id,
+    });
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e.message ?? "CREATE_FAILED" },
+      { status: 400 }
+    );
   }
-
-  const body = await req.json();
-
-  const { data, error } = await supabase
-    .from('transport_bookings')
-    .insert([
-      {
-        agent_id: agentId,
-        ...body,
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Booking create failed' }, { status: 500 });
-  }
-
-  return NextResponse.json({ booking: data });
 }

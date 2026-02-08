@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+const supabase = createSupabaseServerClient();
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+
   const body = await req.json();
 
   const { id, parent_agent_id, level, default_commission, is_active } = body;

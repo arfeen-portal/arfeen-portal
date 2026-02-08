@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 
 export async function GET(req: NextRequest) {
@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const service = searchParams.get('service') || 'transport';
 
-    const supabase = createClient();
+    const supabase = createSupabaseServerClient();
 
     const { data, error } = await supabase
       .from('rate_rules')

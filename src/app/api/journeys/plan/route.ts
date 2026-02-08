@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
@@ -13,8 +13,9 @@ export async function POST(req: Request) {
     preferences,
   } = body;
 
-  // 🔴 pehle: const supabase = createClient();
-  const supabase = await createClient(); // ✅
+  // 🔴 pehle: 
+  const supabase = createSupabaseServerClient();
+
 
   // TODO: yahan AI se real segments banwane hain – abhi fake example:
   const fakeSegments = [

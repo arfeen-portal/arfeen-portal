@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+ const supabase = createSupabaseServerClient();
 
   const { data: auth } = await supabase.auth.getUser();
   const user = auth?.user;

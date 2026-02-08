@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 export const dynamic = "force-dynamic";
 function computeStatus(
   startDate: string | null,
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   const q = searchParams.get("q") || "";
   const statusFilter = searchParams.get("status") || "all";
 
-  const supabase = createClient();
+    const supabase = createSupabaseServerClient();
 
   // Base query: groups + related stats
   let query = supabase

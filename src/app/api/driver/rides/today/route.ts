@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const supabase = createClient();
-  const now = new Date();
-  const start = new Date(now);
+  const supabase = createSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase not available" }, { status: 500 });
+  }
+
+  const start = new Date();
   start.setHours(0, 0, 0, 0);
-  const end = new Date(now);
+
+  const end = new Date();
   end.setHours(23, 59, 59, 999);
 
   const { data, error } = await supabase
@@ -20,5 +25,6 @@ export async function GET() {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
   return NextResponse.json({ items: data ?? [] });
 }
