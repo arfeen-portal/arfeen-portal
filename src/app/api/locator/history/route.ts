@@ -1,10 +1,10 @@
 // src/app/api/locator/history/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const supabase = createServersupabaseClient;
+  const supabase = supabaseAdmin;
 
   const searchParams = req.nextUrl.searchParams;
   const profileId = searchParams.get("profile_id");

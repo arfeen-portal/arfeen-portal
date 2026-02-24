@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabaseServer";
 
 export default function BatchSummary() {
   const { id } = useParams();
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
   const [summary, setSummary] = useState(null);
 
   const fetchSummary = async () => {

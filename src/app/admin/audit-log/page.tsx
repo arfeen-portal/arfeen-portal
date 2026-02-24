@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { supabaseBrowser } from "@/lib/supabaseServer";
 
 type AuditRow = {
   id: number;
@@ -12,7 +12,7 @@ type AuditRow = {
 };
 
 export default async function AuditLogPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
 
   const { data, error } = await supabase
     .from("audit_log")

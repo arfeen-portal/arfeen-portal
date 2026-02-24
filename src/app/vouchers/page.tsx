@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabaseServer";
 
 type Voucher = {
   id: string;
@@ -15,7 +15,7 @@ type Voucher = {
 };
 
 export default function VouchersPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
 
   const [rows, setRows] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(false);

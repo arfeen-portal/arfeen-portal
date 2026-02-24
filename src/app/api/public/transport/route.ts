@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = supabaseAdmin;
 
   // validate API key
   const { data: keyRow, error: keyError } = await supabase

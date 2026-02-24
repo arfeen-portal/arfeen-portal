@@ -1,10 +1,10 @@
 "use server";
 
-import { createServerSupabaseClient } from "@/utils/supabase/server"; // service-role client (tumhari existing pattern ke mutabiq)
+import { getSupabaseServerClient } from "@/lib/supabaseServer"; // service-role client (tumhari existing pattern ke mutabiq)
 export const dynamic = "force-dynamic";
 
 export async function createTransportBookingAndPost(formData: FormData) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await getSupabaseServerClient();
 
   const agentId = formData.get("agent_id") as string;
   const route = formData.get("route") as string; // e.g. "JED→Makkah"

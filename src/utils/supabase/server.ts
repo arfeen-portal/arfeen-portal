@@ -8,7 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * - NO cookies
  * - Safe for route.ts and server utilities
  */
-export function createServerSupabaseClient(): SupabaseClient {
+export function getSupabaseServerClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -25,4 +25,4 @@ export function createServerSupabaseClient(): SupabaseClient {
  * Optional alias for backward compatibility
  * (agar kahin `createClient` naam se import ho raha ho)
  */
-export const createClientServer = createServerSupabaseClient;
+export const createClientServer = getSupabaseServerClient;

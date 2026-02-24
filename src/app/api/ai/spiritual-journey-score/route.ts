@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
 
 export const dynamic = "force-dynamic";
 import { callAI } from '../../../../utils/ai';
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = supabaseAdmin;
   const body = await req.json();
 
   const { journeyId, userId } = body;

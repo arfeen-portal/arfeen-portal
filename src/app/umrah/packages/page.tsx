@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabaseServer";
 
 export default function PackagesPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
   const [packages, setPackages] = useState([]);
 
   const fetchPackages = async () => {

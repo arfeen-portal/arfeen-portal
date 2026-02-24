@@ -1,8 +1,8 @@
 // src/app/dashboard/AdvancedMetrics.tsx
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export default async function AdvancedMetrics() {
-  const supabase = createServerSupabaseClient();
+  const supabase = getSupabaseServerClient();
 
   const [{ data: monthlyRevenue }, { data: topRoutes }, { data: arrivalStats }] =
     await Promise.all([

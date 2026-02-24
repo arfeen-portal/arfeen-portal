@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAgent } from "@/app/api/agent/_utils/withAgent";
-import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const ctx = await withAgent(req as any);
     const body = await req.json();
 
-    const supabase = getSupabaseAdminClient();
+    const supabase = supabaseAdmin;
     {
       return NextResponse.json(
         { error: "SERVICE_UNAVAILABLE" },

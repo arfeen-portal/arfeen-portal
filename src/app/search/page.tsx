@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabaseServer";
 
 const CATEGORY_OPTIONS = [
   { value: "all", label: "All" },
@@ -16,7 +16,7 @@ export default function GlobalSearchPage() {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
 
   const handleSearch = async () => {
     setLoading(true);

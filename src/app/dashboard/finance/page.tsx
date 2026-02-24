@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabaseServer";
 
 type KPI = {
   totalRevenue: number;
@@ -17,7 +17,7 @@ type TopAgent = {
 };
 
 export default function FinanceDashboardPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
 
   const [kpi, setKpi] = useState<KPI | null>(null);
   const [topAgents, setTopAgents] = useState<TopAgent[]>([]);

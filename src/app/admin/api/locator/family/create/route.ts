@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const supabaseAdmin = supabaseAdminSafe();
+    const supabaseAdmin = supabaseAdminSafe);
     if (!supabaseAdmin) {
       return NextResponse.json(
         { error: "Supabase env not configured" },

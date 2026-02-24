@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(req: Request) {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseAdmin);
 
   const url = new URL(req.url);
   const agentId = url.searchParams.get("agentId");
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseAdmin);
   const body = await req.json().catch(() => null);
 
   if (!body) {

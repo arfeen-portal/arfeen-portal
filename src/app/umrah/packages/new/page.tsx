@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+import { createClient } from '@/lib/supabaseServer';
 
 interface HotelOption {
   id: string;
@@ -11,7 +11,7 @@ interface HotelOption {
 
 export default function NewUmrahPackagePage() {
   const router = useRouter();
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
 
   const [hotelsMakkah, setHotelsMakkah] = useState<HotelOption[]>([]);
   const [hotelsMadinah, setHotelsMadinah] = useState<HotelOption[]>([]);

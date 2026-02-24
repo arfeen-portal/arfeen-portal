@@ -1,7 +1,7 @@
-"use client";
+;
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type Candidate = {
   agent_id: string;
@@ -17,7 +17,7 @@ type Candidate = {
 };
 
 export default function CreditControlPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
   const [rows, setRows] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);

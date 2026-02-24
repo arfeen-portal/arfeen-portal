@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
 async function getUserRole() {
-  const supabase = createServersupabaseClient;
+  const supabase = getSupabaseServerClient;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const supabase = createServersupabaseClient;
+  const supabase = getSupabaseServerClient;
 
   const { data, error } = await supabase
     .from("agent_ledger")

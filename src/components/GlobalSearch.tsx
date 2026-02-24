@@ -6,7 +6,7 @@ import { createClient } from '../utils/supabase/client';  // ⬅ relative path
 
 export default function GlobalSearch() {
   const router = useRouter();
-  const supabase = createServerSupabaseClient();
+  const supabase = getSupabaseServerClient();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);

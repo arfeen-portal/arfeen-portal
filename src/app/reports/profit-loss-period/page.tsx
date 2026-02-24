@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabaseServer";
 
 type PLRow = {
   accountCode: string;
@@ -11,7 +11,7 @@ type PLRow = {
 };
 
 export default function ProfitLossPeriodPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
 
   const [rows, setRows] = useState<PLRow[]>([]);
   const [fromDate, setFromDate] = useState("");

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAgent } from "@/app/api/agent/_utils/withAgent";
-import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   }
 
   const ctx = await withAgent(req as any);
-  const supabase = getSupabaseAdminClient();
+  const supabase = supabaseAdmin;
 
   {
     return NextResponse.json(

@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Build-safe env getter
+ * Safe env getter (build + runtime)
  */
 function getEnv(name: string): string | null {
   const v = process.env[name];
@@ -9,28 +9,25 @@ function getEnv(name: string): string | null {
 }
 
 /**
- * 🔐 Server-only Supabase ADMIN client
- * ✅ Build-time SAFE
- * ✅ Runtime SAFE
+ * Server-only Supabase ADMIN client (Service Role)
+ * - Object export (NOT a function)
+ * - Build-time safe
+ * - Runtime safe
  */
-export function getSupabaseAdminClient(): SupabaseClient | null {
-  const url = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+const url = getEnv("NEXT_PUBLIC_SUPABASE_URL");
+const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-  // ⛔ CRITICAL: build-time par yahin STOP
-  if (!url || !serviceKey) {
-    // ⚠️ DO NOT call createClient here
-    return null;
-  }
-
-  return createClient(url, serviceKey, {
-    auth: {
-      persistSession: false,
-    },
-  });
-}
+export const supabaseAdmin: SupabaseClient | null =
+  url && serviceKey
+    ? createClient(url, serviceKey, {
+        auth: {
+          persistSession: false,
+        },
+      })
+    : null;
 
 /**
- * 🔁 Backward compatibility
+ * Backward compatibility (temporary)
+ * NOTE: isko function ki tarah CALL nahi karna
  */
-export const getSupabaseAdmin = getSupabaseAdminClient;
+export const supabaseAdminSafe = supabaseAdmin;

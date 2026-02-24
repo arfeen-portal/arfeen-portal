@@ -1,6 +1,6 @@
 "use server";
 
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { postBookingToAccounts } from "@/lib/accounting/postBooking";
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,7 @@ const TRANSPORT_REVENUE_ACC = "PUT-UUID-4101-HERE";
 const AGENT_RECEIVABLE_ACC = "PUT-UUID-1301-HERE";
 
 export async function createTransportBooking(formData: FormData) {
-  const supabase = createServerSupabaseClient();
+  const supabase = getSupabaseServerClient();
 
   const agentId = formData.get("agent_id") as string;
   const route = formData.get("route") as string;

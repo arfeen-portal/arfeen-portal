@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabaseServer";
 
 type DriverBooking = {
   id: string;
@@ -22,7 +22,7 @@ const statusLabels: Record<string, string> = {
 const statusOrder = ["ASSIGNED", "ON_ROUTE", "COMPLETED"];
 
 export default function DriverHome() {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
   const [driverId, setDriverId] = useState<string | null>(null);
   const [bookings, setBookings] = useState<DriverBooking[]>([]);
   const [loading, setLoading] = useState(true);

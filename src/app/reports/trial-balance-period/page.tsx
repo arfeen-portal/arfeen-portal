@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabaseServer";
 
 type Row = {
   account_id: string;
@@ -13,7 +13,7 @@ type Row = {
 };
 
 export default function TrialBalancePeriodPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseBrowser();));
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);

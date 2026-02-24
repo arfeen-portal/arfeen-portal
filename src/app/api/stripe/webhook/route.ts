@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const dynamic = "force-dynamic";
 // import Stripe from "stripe";  // if you add stripe later
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = supabaseAdmin;
   const body = await req.json();
 
   // TODO: yahan stripe signature verify karna hota hai.

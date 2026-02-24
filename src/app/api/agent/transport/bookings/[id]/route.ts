@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { withAgent } from "@/app/api/agent/_utils/withAgent";
-import { getSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,7 +23,7 @@ export async function PATCH(
     const body = (await req.json()) as Record<string, any>;
 
     // 🚨 CRITICAL FIX: cast supabase CLIENT (not table)
-    const supabase = getSupabaseAdminClient() as any;
+    const supabase = supabaseAdmin;
 
      {
       return NextResponse.json(
