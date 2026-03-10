@@ -10,7 +10,7 @@ type SearchRoute = {
   keywords?: string[];
 };
 
-export function GlobalSearchBox() {
+export default function GlobalSearchBox() {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
@@ -18,13 +18,14 @@ export function GlobalSearchBox() {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
+
     if (!q) return [];
 
     return (SEARCH_ROUTES as SearchRoute[])
       .filter((route) => {
         const label = route.label.toLowerCase();
         const path = route.path.toLowerCase();
-        const keywords = (route.keywords || []).join(" ").toLowerCase();
+        const keywords = (route.keywords ?? []).join(" ").toLowerCase();
 
         return (
           label.includes(q) ||
@@ -43,6 +44,7 @@ export function GlobalSearchBox() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (results[0]) {
       handleSelect(results[0].path);
     }
@@ -51,6 +53,7 @@ export function GlobalSearchBox() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (!wrapperRef.current) return;
+
       if (!wrapperRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
