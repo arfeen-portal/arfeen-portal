@@ -1,7 +1,7 @@
-;
+"use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type Row = {
   branch_id: string | null;
@@ -19,7 +19,7 @@ type Branch = {
 };
 
 export default function BranchPLPage() {
-  const supabase = supabaseBrowser();));
+  const supabase = createClient();
 
   const [branchId, setBranchId] = useState<string>("");
   const [branches, setBranches] = useState<Branch[]>([]);

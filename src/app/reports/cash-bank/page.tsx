@@ -11,7 +11,7 @@ type Row = {
 };
 
 export default function CashBankReportPage() {
-  const supabase = supabaseBrowser;
+  const supabase = createClient();
 
   if (!supabase) {
     throw new Error("Supabase not initialized");

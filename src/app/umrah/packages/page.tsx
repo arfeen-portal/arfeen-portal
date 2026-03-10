@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
 
 export default function PackagesPage() {
-  const supabase = supabaseBrowser();));
+  const supabase = createClient();
   const [packages, setPackages] = useState([]);
 
   const fetchPackages = async () => {

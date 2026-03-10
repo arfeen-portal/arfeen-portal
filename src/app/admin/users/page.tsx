@@ -1,7 +1,7 @@
-;
+"use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type UserRow = {
   id: string;
@@ -12,7 +12,7 @@ type UserRow = {
 };
 
 export default function AdminUsersPage() {
-  const supabase = supabaseBrowser();));
+  const supabase = createClient();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
 

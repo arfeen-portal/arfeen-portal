@@ -14,7 +14,7 @@ type Row = {
 };
 
 export default function PartyLedgerPage() {
-  const supabase = supabaseBrowser();));
+  const supabase = createClient();
 
   const [partyType, setPartyType] = useState<"agent" | "supplier" | "customer">(
     "agent"

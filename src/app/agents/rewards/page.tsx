@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type RewardRow = {
   agent_id: string;
@@ -16,7 +16,7 @@ type ScoreRow = {
 };
 
 export default function AgentRewardsPage() {
-  const supabase = supabaseBrowser();));
+  const supabase = createClient();
 
   const [rewards, setRewards] = useState<RewardRow[]>([]);
   const [scores, setScores] = useState<ScoreRow[]>([]);

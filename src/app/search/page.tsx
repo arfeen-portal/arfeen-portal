@@ -16,7 +16,7 @@ export default function GlobalSearchPage() {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const supabase = supabaseBrowser();));
+  const supabase = createClient();
 
   const handleSearch = async () => {
     setLoading(true);

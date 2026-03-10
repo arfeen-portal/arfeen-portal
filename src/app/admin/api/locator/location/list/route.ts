@@ -7,7 +7,7 @@ import { supabaseAdminSafe } from '@/lib/supabaseAdminSafe';
 
 export async function GET(req: NextRequest) {
   try {
-    const supabaseAdmin = supabaseAdminSafe);
+    const supabaseAdmin = supabaseAdminSafe;;
 
     if (!supabaseAdmin) {
       return NextResponse.json(

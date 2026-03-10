@@ -1,32 +1,17 @@
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import { randomBytes } from "crypto";
+import { createClient } from "@/lib/supabaseServer";
 
-/**
- * Supabase Server Client (SAFE for App Router + Build)
- */
-function supabaseBrowser()) {
-  const cookieStore = cookies();
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-}
-
-function generateKey() {
-  return "atk_" + randomBytes(16).toString("hex");
-}
+type ApiKeyRow = {
+  id: string;
+  key_value: string;
+  is_active: boolean;
+  created_at: string;
+  agent?: {
+    name?: string | null;
+  } | null;
+};
 
 export default async function ApiKeysPage() {
-  const supabase = supabaseBrowser();));
+  const supabase = createClient();
 
   const { data: keys, error } = await supabase
     .from("api_keys")
@@ -34,7 +19,7 @@ export default async function ApiKeysPage() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    throw new Error("Failed to load API keys");
+    throw new Error("Failed to load API keys: " + error.message);
   }
 
   return (
@@ -58,7 +43,7 @@ export default async function ApiKeysPage() {
           </thead>
 
           <tbody>
-            {keys?.map((k: any) => (
+            {(keys as ApiKeyRow[] | null)?.map((k) => (
               <tr key={k.id} className="border-b last:border-0">
                 <td className="py-2">{k.agent?.name ?? "-"}</td>
                 <td className="font-mono text-xs">{k.key_value}</td>
@@ -68,6 +53,14 @@ export default async function ApiKeysPage() {
                 </td>
               </tr>
             ))}
+
+            {(!keys || keys.length === 0) && (
+              <tr>
+                <td className="py-3 text-sm text-gray-500" colSpan={4}>
+                  No API keys found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

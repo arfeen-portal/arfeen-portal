@@ -44,7 +44,7 @@ function guessRoute(from: string, to: string): Suggestion[] {
 }
 
 export default function SmartBookingPage() {
-  const supabase = supabaseBrowser();));
+  const supabase = createClient();
 
   const [flightFrom, setFlightFrom] = useState("");
   const [flightTo, setFlightTo] = useState("");

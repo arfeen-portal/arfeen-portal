@@ -1,7 +1,7 @@
-;
+"use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type Row = {
   party_type: string;
@@ -16,7 +16,7 @@ type Row = {
 };
 
 export default function AgingReportPage() {
-  const supabase = supabaseBrowser();));
+  const supabase = createClient();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
