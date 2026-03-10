@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { createClient } from "@/lib/supabaseServer";
 
 export default function BatchDetail() {
   const { id } = useParams();

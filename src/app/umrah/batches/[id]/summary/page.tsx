@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { createClient } from "@/lib/supabaseServer";
 
 export default function BatchSummary() {
   const { id } = useParams();

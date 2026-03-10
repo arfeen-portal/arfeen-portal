@@ -1,10 +1,9 @@
 "use server";
 
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
-
+import { createClient } from "@/lib/supabaseServer";
 
 export async function getDashboardData() {
-  const supabase = await getSupabaseServerClient();
+  const supabase = createClient();
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -25,13 +24,11 @@ export async function getDashboardData() {
   const totalRevenue =
     !revenueError && revenueData
       ? revenueData.reduce(
-          (sum: number, row: { amount: number | null }) =>
-            sum + (row.amount ?? 0),
+          (sum, row: { amount: number | null }) => sum + (row.amount ?? 0),
           0
         )
       : 0;
 
-  // topRoutes abhi static rakhte hain
   const topRoutes = [
     { route: "Jeddah → Makkah", count: 42 },
     { route: "Makkah → Madinah", count: 29 },

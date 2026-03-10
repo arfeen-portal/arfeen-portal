@@ -1,5 +1,4 @@
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
-export const dynamic = "force-dynamic";
+import { createClient } from "@/lib/supabaseServer";
 
 export type BrandConfig = {
   primaryColor: string;
@@ -8,10 +7,8 @@ export type BrandConfig = {
   name: string;
 };
 
-export async function getBrandForHost(
-  host: string
-): Promise<BrandConfig> {
-  const supabase = await getSupabaseServerClient();
+export async function getBrandForHost(host: string): Promise<BrandConfig> {
+  const supabase = createClient();
 
   const { data } = await supabase
     .from("portal_brands")
@@ -20,7 +17,6 @@ export async function getBrandForHost(
     .maybeSingle();
 
   if (!data) {
-    // default Arfeen brand
     return {
       name: "Arfeen Travel",
       primaryColor: "#0F3A6D",

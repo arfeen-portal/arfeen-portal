@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { createClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
 async function getUserRole() {
-  const supabase = getSupabaseServerClient;
+  const supabase = createClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const supabase = getSupabaseServerClient;
+  const supabase = createClient();
 
   const { data, error } = await supabase
     .from("agent_ledger")
@@ -36,10 +37,7 @@ export async function GET(req: NextRequest) {
     .limit(100);
 
   if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json({ data });
