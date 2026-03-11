@@ -2,32 +2,44 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-function getEnv(key: string): string {
-  const value = process.env[key];
-  if (!value) {
-    throw new Error(`Missing environment variable: ${key}`);
+type AppSupabaseClient = SupabaseClient<any, "public", any>;
+
+function getSupabaseEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return null;
   }
-  return value;
+
+  return { url, anonKey };
 }
 
-export function createClient(): SupabaseClient {
-  const cookieStore = cookies();
+export function getSupabaseServerClient(): AppSupabaseClient | null {
+  try {
+    const env = getSupabaseEnv();
+    if (!env) return null;
 
-  return createServerClient(
-    getEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-    {
+    const cookieStore = cookies();
+
+    return createServerClient(env.url, env.anonKey, {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
+        set() {
+          // no-op in read contexts
         },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+        remove() {
+          // no-op in read contexts
         },
       },
-    }
-  );
+    });
+  } catch {
+    return null;
+  }
+}
+
+export function createSupabaseServerClient(): AppSupabaseClient | null {
+  return getSupabaseServerClient();
 }
