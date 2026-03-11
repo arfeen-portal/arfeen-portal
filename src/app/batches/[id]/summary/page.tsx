@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 interface PageProps {
   params: { id: string };
 }
 
 export default async function BatchSummaryPage({ params }: PageProps) {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   const batchId = params.id;
 

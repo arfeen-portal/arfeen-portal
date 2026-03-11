@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type Row = {
   id: string;
@@ -14,7 +14,7 @@ type Row = {
 };
 
 export default function PartyLedgerPage() {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   const [partyType, setPartyType] = useState<"agent" | "supplier" | "customer">(
     "agent"

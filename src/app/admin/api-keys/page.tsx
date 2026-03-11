@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type ApiKeyRow = {
   id: string;
@@ -11,7 +11,7 @@ type ApiKeyRow = {
 };
 
 export default async function ApiKeysPage() {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   const { data: keys, error } = await supabase
     .from("api_keys")

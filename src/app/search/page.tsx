@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 const CATEGORY_OPTIONS = [
   { value: "all", label: "All" },
@@ -16,39 +16,58 @@ export default function GlobalSearchPage() {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   const handleSearch = async () => {
+    const query = q.trim();
+
     setLoading(true);
     setResults([]);
 
-    // Simple example – aap apni purani global search ka code yahan shift kar sakte ho
-    if (category === "bookings" || category === "all") {
-      const { data } = await supabase
-        .from("bookings")
-        .select("id, reference, pickup_city, dropoff_city, created_at")
-        .ilike("reference", `%${q}%`)
-        .limit(20);
-      setResults(data || []);
+    try {
+      if (!query) {
+        setLoading(false);
+        return;
+      }
+
+      // bookings
+      if (category === "bookings" || category === "all") {
+        const { data, error } = await supabase
+          .from("bookings")
+          .select("id, reference, pickup_city, dropoff_city, created_at")
+          .ilike("reference", `%${query}%`)
+          .limit(20);
+
+        if (error) {
+          console.error("Bookings search error:", error);
+        } else {
+          setResults(data ?? []);
+        }
+      }
+
+      // TODO: add agents / vehicles queries here later
+    } catch (error) {
+      console.error("Global search error:", error);
+      setResults([]);
+    } finally {
+      setLoading(false);
     }
-
-    // TODO: add agents / vehicles etc similarly
-
-    setLoading(false);
   };
 
   return (
     <main className="p-6">
-      <h1 className="text-lg font-semibold mb-4">Global Search</h1>
-      <div className="flex gap-2 mb-3">
+      <h1 className="mb-4 text-lg font-semibold">Global Search</h1>
+
+      <div className="mb-3 flex gap-2">
         <input
-          className="border rounded px-3 py-2 flex-1"
-          placeholder="Type to search…"
+          className="flex-1 rounded border px-3 py-2"
+          placeholder="Type to search..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
+
         <select
-          className="border rounded px-2 py-2"
+          className="rounded border px-2 py-2"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -58,18 +77,21 @@ export default function GlobalSearchPage() {
             </option>
           ))}
         </select>
+
         <button
-          className="px-4 py-2 rounded bg-blue-600 text-white text-sm"
+          type="button"
+          className="rounded bg-blue-600 px-4 py-2 text-sm text-white"
           onClick={handleSearch}
         >
           {loading ? "Searching..." : "Search"}
         </button>
       </div>
 
-      <div className="border rounded-xl p-3 bg-white text-xs">
+      <div className="rounded-xl border bg-white p-3 text-xs">
         {results.length === 0 && !loading && (
           <p className="text-gray-500 text-xs">No results</p>
         )}
+
         <ul className="space-y-1">
           {results.map((r) => (
             <li key={r.id} className="flex justify-between">

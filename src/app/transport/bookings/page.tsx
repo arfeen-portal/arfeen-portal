@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function TransportBookingsPage() {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   const { data: bookings, error } = await supabase
     .from("transport_bookings")

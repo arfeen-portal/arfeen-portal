@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type Row = {
   account_id: string;
@@ -11,7 +11,7 @@ type Row = {
 };
 
 export default function CashBankReportPage() {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   if (!supabase) {
     throw new Error("Supabase not initialized");

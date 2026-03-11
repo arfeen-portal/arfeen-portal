@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export const dynamic = "force-dynamic";
 
-const supabase = createClient();
+const supabase = supabaseClient;
 
 export async function getHotelRates(
   city: string,

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export type BrandConfig = {
   primaryColor: string;
@@ -8,7 +8,7 @@ export type BrandConfig = {
 };
 
 export async function getBrandForHost(host: string): Promise<BrandConfig> {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   const { data } = await supabase
     .from("portal_brands")

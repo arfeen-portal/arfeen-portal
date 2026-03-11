@@ -1,9 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export async function getDashboardData() {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   const today = new Date().toISOString().split("T")[0];
 

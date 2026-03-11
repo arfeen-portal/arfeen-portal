@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 import Link from "next/link";
 
 type PageProps = {
@@ -6,7 +6,7 @@ type PageProps = {
 };
 
 export default async function BookingDetailPage({ params }: PageProps) {
-  const supabase = createClient();
+  const supabase = supabaseClient;
   const bookingId = params.id;
 
   const { data, error } = await supabase

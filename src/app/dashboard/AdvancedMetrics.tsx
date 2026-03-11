@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabaseServer";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export default async function AdvancedMetrics() {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   const [{ data: monthlyRevenue }, { data: topRoutes }, { data: arrivalStats }] =
     await Promise.all([
