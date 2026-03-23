@@ -1,16 +1,8 @@
-// src/app/transport/page.tsx
+import TransportListPage from "./TransportListPage";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export default function TransportPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Transport Module</h1>
 
-      <div className="bg-white rounded-xl shadow p-4">
-        <p className="text-gray-700">
-          Transport booking UI loaded successfully ✅
-        </p>
-      </div>
-    </div>
-  );
+export default function TransportPage() {
+  return <TransportListPage />;
 }

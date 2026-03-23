@@ -15,23 +15,26 @@ function getSupabaseEnv() {
   return { url, anonKey };
 }
 
-export function getSupabaseServerClient(): AppSupabaseClient | null {
+export async function createSupabaseServerClient(): Promise<AppSupabaseClient | null> {
   try {
     const env = getSupabaseEnv();
     if (!env) return null;
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
 
     return createServerClient(env.url, env.anonKey, {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        set() {
-          // no-op in read contexts
-        },
-        remove() {
-          // no-op in read contexts
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // ignore in read-only server component contexts
+          }
         },
       },
     });
@@ -40,6 +43,6 @@ export function getSupabaseServerClient(): AppSupabaseClient | null {
   }
 }
 
-export function createSupabaseServerClient(): AppSupabaseClient | null {
-  return getSupabaseServerClient();
+export async function getSupabaseServerClient(): Promise<AppSupabaseClient | null> {
+  return createSupabaseServerClient();
 }
