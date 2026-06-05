@@ -1,32 +1,44 @@
-"use client";
-
 import React from "react";
 
-type Pkg = {
-  id: string;
-  name: string;
-  code?: string | null;
-  // agar aapke pkg me aur fields bhi hain to yahan add kar lo (optional)
-  [key: string]: any;
+type PageProps = {
+  params: Promise<{
+    id: string;
+  }>;
 };
 
-type Props = {
-  pkg: Pkg;
-};
-
-export default function PackageCalculatorInline({ pkg }: Props) {
-  // NOTE: yahan aapka existing UI/logic paste kar sakte ho
-  // Main safe skeleton de raha hoon — aapka code yahan continue ho sakta hai.
+export default async function PackagePricingPage({ params }: PageProps) {
+  const { id } = await params;
 
   return (
-    <div className="rounded-xl border bg-white p-4">
-      <div className="text-sm text-gray-500">Package</div>
-      <div className="text-lg font-semibold">{pkg?.name}</div>
-      {pkg?.code ? (
-        <div className="text-sm text-gray-600">Code: {pkg.code}</div>
-      ) : null}
+    <main className="min-h-screen bg-slate-950 p-6 text-white">
+      <div className="mx-auto max-w-5xl rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+        <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-400">
+          Arfeen Travel · Umrah Package
+        </p>
 
-      {/* ✅ Apna calculator UI yahan */}
-    </div>
+        <h1 className="mt-3 text-3xl font-black">Package Pricing Calculator</h1>
+
+        <p className="mt-2 text-sm text-slate-300">
+          Package ID: <span className="font-bold text-white">{id}</span>
+        </p>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+            <p className="text-xs uppercase text-slate-400">Sharing</p>
+            <p className="mt-2 text-2xl font-black">Ready</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+            <p className="text-xs uppercase text-slate-400">Quad / Triple / Double</p>
+            <p className="mt-2 text-2xl font-black">Calculator</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+            <p className="text-xs uppercase text-slate-400">Status</p>
+            <p className="mt-2 text-2xl font-black text-emerald-300">Build Safe</p>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, context: any) {
   const { id } = params;
 
   // ⬇️ YAHAN SE NEECHAY AAPKA PURANA CODE BILKUL AS-IS:
-  const supabase = supabaseAdmin;
+  const supabase = getSupabaseAdmin();
   const body = await req.json();
   // baaki jo bhi tumne likha hai, sab jaisa hai waisa rehne do
 

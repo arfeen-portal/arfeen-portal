@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = supabaseAdminSafe;
+    const supabase = getSupabaseAdminSafe();
+
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Supabase admin client not configured" },
+        { status: 500 }
+      );
+    }
 
     const body = await req.json();
     const batchId = body.batchId;
@@ -18,10 +25,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data: stagingRows } = await supabase
+    const { data: stagingRows, error: stagingError } = await supabase
       .from("agent_import_staging")
       .select("*")
       .eq("batch_id", batchId);
+
+    if (stagingError) {
+      return NextResponse.json(
+        { error: stagingError.message },
+        { status: 500 }
+      );
+    }
 
     if (!stagingRows || stagingRows.length === 0) {
       return NextResponse.json({ total: 0, upserted: 0 });
@@ -58,8 +72,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) {
     console.error(e);
+
     return NextResponse.json(
-      { error: e.message || "Unknown error" },
+      { error: e?.message || "Unknown error" },
       { status: 500 }
     );
   }

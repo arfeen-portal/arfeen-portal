@@ -1,72 +1,86 @@
 "use client";
-import { useState, useEffect } from "react";
+
 import Link from "next/link";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { useEffect, useMemo, useState } from "react";
 
-export default function PackagesPage() {
-  const supabase = supabaseClient;
-  const [packages, setPackages] = useState([]);
-
-  const fetchPackages = async () => {
-    const { data, error } = await supabase
-      .from("umrah_packages")
-      .select("id, title, nights_makkah, nights_madinah, is_available, total_profit");
-
-    if (!error) setPackages(data);
-  };
+export default function UmrahPackagesPage() {
+  const [packages, setPackages] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchPackages();
+    fetch("/api/umrah/packages")
+      .then((res) => res.json())
+      .then((json) => setPackages(json.packages || []));
   }, []);
 
+  const filtered = useMemo(() => {
+    return packages.filter((p) =>
+      `${p.package_name} ${p.package_code} ${p.status}`
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
+  }, [packages, search]);
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Umrah Packages</h1>
-        <Link
-          href="/umrah/packages/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md"
-        >
-          + Create Package
+    <main className="min-h-screen bg-slate-50 p-6">
+      <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Umrah Packages</h1>
+          <p className="text-slate-500">Advanced package list with profit, seats and inventory costing.</p>
+        </div>
+
+        <Link href="/umrah/packages/new" className="rounded-xl bg-black px-5 py-3 text-white">
+          Create Package
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {packages.map((pkg) => (
-          <div key={pkg.id} className="p-5 border rounded-lg shadow-sm bg-white space-y-2">
-            <h3 className="font-bold text-xl">{pkg.title}</h3>
+      <input
+        className="mb-5 w-full rounded-xl border bg-white px-4 py-3"
+        placeholder="Search package, code, status..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
 
-            <p className="text-gray-700">
-              <span className="font-medium">Makkah:</span> {pkg.nights_makkah} nights
-            </p>
-            <p className="text-gray-700">
-              <span className="font-medium">Madinah:</span> {pkg.nights_madinah} nights
-            </p>
+      <div className="grid gap-4">
+        {filtered.map((p) => (
+          <div key={p.id} className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+              <div>
+                <h2 className="text-xl font-semibold">{p.package_name}</h2>
+                <p className="text-sm text-slate-500">{p.package_code} • {p.status}</p>
+              </div>
 
-            <p className="text-gray-900 font-semibold">
-              Profit: {pkg.total_profit} SAR
-            </p>
+              <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+                <div>
+                  <p className="text-slate-500">Seats</p>
+                  <b>{p.seats_booked}/{p.seats_total}</b>
+                </div>
+                <div>
+                  <p className="text-slate-500">Cost</p>
+                  <b>{Number(p.inventory_cost || 0).toLocaleString()}</b>
+                </div>
+                <div>
+                  <p className="text-slate-500">Sale</p>
+                  <b>{Number(p.selling_price || 0).toLocaleString()}</b>
+                </div>
+                <div>
+                  <p className="text-slate-500">Profit</p>
+                  <b>{Number(p.estimated_profit || 0).toLocaleString()}</b>
+                </div>
+              </div>
 
-            <div className="flex items-center justify-between">
-              <Link
-                href={`/umrah/packages/${pkg.id}`}
-                className="text-blue-600 font-medium"
-              >
-                View
-              </Link>
-
-              <span
-                className={`px-3 py-1 rounded-full text-xs ${
-                  pkg.is_available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                }`}
-              >
-                {pkg.is_available ? "Available" : "Not Available"}
-              </span>
+              <div className="flex gap-2">
+                <Link href={`/umrah/packages/${p.id}/pricing`} className="rounded-lg border px-4 py-2">
+                  Pricing
+                </Link>
+                <Link href={`/umrah/packages/${p.id}/itinerary`} className="rounded-lg border px-4 py-2">
+                  Itinerary
+                </Link>
+              </div>
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </main>
   );
 }
-

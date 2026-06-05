@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { withAgent } from "@/app/api/agent/_utils/withAgent";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
     const ctx = await withAgent(req);
-    const supabase = supabaseAdmin;
+    const supabase = getSupabaseAdmin();
    return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
 
     const { data, error } = await supabase

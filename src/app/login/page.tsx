@@ -1,87 +1,227 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabaseClient } from '@/lib/supabaseClient';
+import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import {
+  ArrowRight,
+  Building2,
+  Lock,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 
-const supabase = supabaseClient;
+const supabase =
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ? createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      )
+    : null;
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: FormEvent) => {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setErrorMsg("");
+    setError("");
+    setBusy(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      if (!supabase) {
+        setError("Supabase client is not configured.");
+        return;
+      }
 
-    if (error) {
-      setErrorMsg(error.message);
-      setLoading(false);
-      return;
+      const { data, error: loginError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+
+      if (loginError || !data.session) {
+        setError(loginError?.message || "Login failed.");
+        return;
+      }
+
+      const token = data.session.access_token;
+
+      const meRes = await fetch("/api/agent/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const me = await meRes.json();
+
+      if (me.ok && me.user?.role === "agent") {
+        window.location.href = "/agent/dashboard";
+        return;
+      }
+
+      const adminRes = await fetch("/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).catch(() => null);
+
+      if (adminRes?.ok) {
+        const adminMe = await adminRes.json();
+        if (adminMe?.user?.role === "admin") {
+          window.location.href = "/admin/dashboard";
+          return;
+        }
+        if (adminMe?.user?.role === "accountant") {
+          window.location.href = "/accounts";
+          return;
+        }
+      }
+
+      window.location.href = "/accounts";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
     }
-
-    router.push("/");
-  };
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white border rounded-xl shadow-sm p-6 space-y-4">
-        <h1 className="text-xl font-bold text-center">Arfeen Portal Login</h1>
+    <main className="min-h-screen bg-[#08111f] text-white">
+      <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="relative hidden overflow-hidden lg:block">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#07101d] via-[#111d33] to-[#020617]" />
+          <div className="absolute left-16 top-16 h-72 w-72 rounded-full bg-amber-400/20 blur-3xl" />
+          <div className="absolute bottom-16 right-12 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
 
-        {errorMsg && (
-          <div className="bg-red-100 text-red-700 text-sm p-2 rounded">
-            {errorMsg}
+          <div className="relative z-10 flex h-full flex-col justify-between p-14">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-400 text-slate-950">
+                  <Building2 size={24} />
+                </div>
+                <div>
+                  <h1 className="text-xl font-black">Arfeen Travel Portal</h1>
+                  <p className="text-sm text-slate-300">
+                    B2B Umrah, Transport & Accounts ERP
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-24 max-w-xl">
+                <p className="text-sm font-bold uppercase tracking-[0.35em] text-amber-300">
+                  Secure Agent Access
+                </p>
+                <h2 className="mt-5 text-5xl font-black leading-tight">
+                  Separate, clean and professional login for every agent.
+                </h2>
+                <p className="mt-6 text-lg leading-8 text-slate-300">
+                  Agents see only their bookings, ledger, invoices, packages and
+                  hotel demands. Admin keeps full control from the main portal.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                ["Role Guarded", "Agent/Admin separation"],
+                ["Private Data", "Agent-wise filtering"],
+                ["White Label", "Portal branding ready"],
+              ].map((item) => (
+                <div
+                  key={item[0]}
+                  className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur"
+                >
+                  <p className="font-bold">{item[0]}</p>
+                  <p className="mt-2 text-sm text-slate-300">{item[1]}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+        </section>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-sm font-semibold mb-1">Email</label>
-            <input
-              type="email"
-              className="border rounded w-full p-2 text-sm"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="agent@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              className="border rounded w-full p-2 text-sm"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-black text-white rounded py-2 text-sm font-semibold disabled:opacity-60"
+        <section className="flex items-center justify-center px-5 py-10">
+          <form
+            onSubmit={handleLogin}
+            className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white p-8 text-slate-950 shadow-2xl"
           >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+            <div className="mb-8">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700">
+                <ShieldCheck size={16} />
+                Secure Portal Login
+              </div>
+              <h1 className="text-3xl font-black">Welcome back</h1>
+              <p className="mt-2 text-sm text-slate-500">
+                Login to continue to your Arfeen Travel workspace.
+              </p>
+            </div>
 
-        <p className="text-[11px] text-gray-500 text-center">
-          Users ko tum Supabase Auth dashboard se manage kar sakte ho.
-        </p>
+            {error ? (
+              <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                {error}
+              </div>
+            ) : null}
+
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold text-slate-700">
+                  Email Address
+                </span>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
+                  <Mail size={18} className="text-slate-400" />
+                  <input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    type="email"
+                    required
+                    className="h-12 w-full bg-transparent text-sm font-semibold outline-none"
+                    placeholder="agent@example.com"
+                  />
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-bold text-slate-700">
+                  Password
+                </span>
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
+                  <Lock size={18} className="text-slate-400" />
+                  <input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    type="password"
+                    required
+                    className="h-12 w-full bg-transparent text-sm font-semibold outline-none"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </label>
+            </div>
+
+            <button
+              disabled={busy}
+              className="mt-7 flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg transition hover:bg-slate-800 disabled:opacity-60"
+            >
+              {busy ? "Signing in..." : "Login to Portal"}
+              <ArrowRight size={18} />
+            </button>
+
+            <div className="mt-6 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
+              <div className="flex gap-2 font-bold">
+                <Sparkles size={16} />
+                Agent access is protected.
+              </div>
+              <p className="mt-1 text-amber-800">
+                Your dashboard will only show data connected to your agent
+                account.
+              </p>
+            </div>
+          </form>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

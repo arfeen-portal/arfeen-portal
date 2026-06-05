@@ -1,53 +1,82 @@
 import { cookies } from "next/headers";
-import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 import { withTenant } from "@/app/api/_utils/withTenant";
 
-export async function withAgent(req: Request) {
-  // 1️⃣ Resolve tenant (LOCKED)
-  const tenantCtx = await withTenant(req as any);
+export type AgentContext = {
+  tenantCtx: any;
+  tenant_id: string;
+  tenantId: string;
+  agent_id: string;
+  agentId: string;
+  agent_role: string | null;
+  agentRole: string | null;
+  agent: any;
+  user: any;
+};
 
-  // 2️⃣ Read auth session
-  const cookieStore = cookies();
-  const accessToken = cookieStore.get("sb-access-token")?.value;
+export async function withAgent(req: Request): Promise<AgentContext> {
+  const tenantCtx: any = await withTenant(req as any);
+
+  const tenantId =
+    tenantCtx?.["tenant_id"] ??
+    tenantCtx?.["tenantId"] ??
+    tenantCtx?.["tenant"]?.["id"] ??
+    null;
+
+  if (!tenantId) {
+    throw new Error("TENANT_NOT_FOUND");
+  }
+
+  const cookieStore = await cookies();
+
+  const accessToken =
+    cookieStore.get("sb-access-token")?.value ??
+    cookieStore.get("supabase-auth-token")?.value ??
+    cookieStore.get("sb:token")?.value ??
+    null;
 
   if (!accessToken) {
     throw new Error("UNAUTHENTICATED");
   }
 
-  // 3️⃣ Supabase (runtime only)
-  const supabase = supabaseAdminSafe;
-   {
+  const supabase = getSupabaseAdminSafe();
+
+  if (!supabase) {
     throw new Error("SUPABASE_NOT_AVAILABLE");
   }
 
-  // 4️⃣ Get user from token
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser(accessToken);
+  const userRes = await supabase.auth.getUser(accessToken);
 
-  if (userError || !user) {
+  if (userRes.error || !userRes.data.user) {
     throw new Error("INVALID_SESSION");
   }
 
-  // 5️⃣ Map user → agent_profiles (tenant scoped)
-  const { data: agent } = await supabase
+  const user = userRes.data.user;
+
+  const { data: agent, error: agentError } = await supabase
     .from("agent_profiles")
     .select("*")
-    .eq("tenant_id", tenantCtx.tenant_id)
+    .eq("tenant_id", tenantId)
     .eq("user_id", user.id)
     .eq("is_active", true)
     .maybeSingle();
+
+  if (agentError) {
+    throw agentError;
+  }
 
   if (!agent) {
     throw new Error("AGENT_NOT_FOUND");
   }
 
-  // 6️⃣ Final context
   return {
-    ...tenantCtx,
+    tenantCtx,
+    tenant_id: tenantId,
+    tenantId,
     agent_id: agent.id,
-    agent_role: agent.role,
+    agentId: agent.id,
+    agent_role: agent.role ?? null,
+    agentRole: agent.role ?? null,
     agent,
     user,
   };

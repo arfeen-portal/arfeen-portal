@@ -1,12 +1,23 @@
-// src/app/agents/dashboard/page.tsx
-import { supabaseClient } from "@/lib/supabaseClient";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
 export default async function AgentDashboardPage() {
-  const supabase = supabaseClient;
+  const supabase = getSupabaseAdminSafe();
+
+  if (!supabase) {
+    return (
+      <main className="p-6">
+        <div className="rounded-xl border bg-white p-6">
+          Supabase not configured
+        </div>
+      </main>
+    );
+  }
 
   const { data } = await supabase
-    .from("v_agent_ledger_summary")
+    .from("agent_ledger_summary")
     .select("*")
     .order("agent_name", { ascending: true });
 
@@ -14,43 +25,52 @@ export default async function AgentDashboardPage() {
 
   return (
     <main className="p-6">
-      <h1 className="text-lg font-semibold mb-4">Agent Ledger Summary</h1>
-      <div className="border rounded-xl bg-white overflow-hidden">
-        <table className="w-full text-xs">
+      <h1 className="mb-4 text-2xl font-semibold">
+        Agent Ledger Summary
+      </h1>
+
+      <div className="overflow-hidden rounded-xl border bg-white">
+        <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="text-left px-3 py-2">Agent</th>
-              <th className="text-right px-3 py-2">Total Debit</th>
-              <th className="text-right px-3 py-2">Total Credit</th>
-              <th className="text-right px-3 py-2">Balance</th>
+              <th className="px-3 py-2 text-left">Agent</th>
+              <th className="px-3 py-2 text-right">Total Debit</th>
+              <th className="px-3 py-2 text-right">Total Credit</th>
+              <th className="px-3 py-2 text-right">Balance</th>
             </tr>
           </thead>
+
           <tbody>
             {rows.map((r: any) => (
               <tr key={r.agent_id} className="border-t">
-                <td className="px-3 py-2">{r.agent_name}</td>
-                <td className="px-3 py-2 text-right">
-                  {Number(r.total_debit).toLocaleString()}
+                <td className="px-3 py-2">
+                  {r.agent_name}
                 </td>
+
                 <td className="px-3 py-2 text-right">
-                  {Number(r.total_credit).toLocaleString()}
+                  {Number(r.total_debit || 0).toLocaleString()}
                 </td>
+
+                <td className="px-3 py-2 text-right">
+                  {Number(r.total_credit || 0).toLocaleString()}
+                </td>
+
                 <td
-                  className={
-                    "px-3 py-2 text-right " +
-                    (Number(r.balance) > 0
+                  className={`px-3 py-2 text-right font-semibold ${
+                    Number(r.balance || 0) > 0
                       ? "text-red-600"
-                      : "text-green-600")
-                  }
+                      : "text-green-600"
+                  }`}
                 >
-                  {Number(r.balance).toLocaleString()}
+                  {Number(r.balance || 0).toLocaleString()}
                 </td>
               </tr>
             ))}
+
             {rows.length === 0 && (
               <tr>
                 <td
-                  className="px-3 py-2 text-xs text-gray-500"
+                  className="px-3 py-6 text-center text-gray-500"
                   colSpan={4}
                 >
                   No data

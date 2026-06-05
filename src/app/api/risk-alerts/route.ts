@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const supabase = supabaseAdmin;
+  const supabase = getSupabaseAdmin();
   const { searchParams } = new URL(req.url);
   const country = searchParams.get('country');
   const now = new Date().toISOString();

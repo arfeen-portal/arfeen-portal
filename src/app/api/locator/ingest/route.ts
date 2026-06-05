@@ -1,10 +1,10 @@
 // src/app/api/locator/ingest/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const supabase = supabaseAdmin;
+  const supabase = getSupabaseAdmin();
   const body = await req.json();
 
   const {

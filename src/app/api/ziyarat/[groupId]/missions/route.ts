@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,7 @@ export async function GET(
 ) {
   const { groupId } = context.params;
 
-  const supabase = supabaseAdmin;
+  const supabase = getSupabaseAdmin();
   if (!supabase) {
     return NextResponse.json(
       { error: "SERVICE_UNAVAILABLE" },

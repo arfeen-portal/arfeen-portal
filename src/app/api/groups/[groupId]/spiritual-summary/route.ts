@@ -1,26 +1,12 @@
-// src/app/api/groups/[groupId]/spiritual-summary/route.ts
+﻿import { NextResponse } from "next/server";
 
-// TypeScript strictness off:
- // @ts-nocheck
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-import { NextRequest, NextResponse } from "next/server";
-
-// GET handler — context ko any rakhte hain
-export const GET = async (request: NextRequest, context: any) => {
-  const groupId = context?.params?.groupId ?? "";
-
-  // TODO: Actual spiritual summary logic baad mein add hoga.
-  return NextResponse.json(
-    {
-      ok: true,
-      groupId,
-      summary: {
-        pilgrims: [],
-        events: [],
-      },
-      message:
-        "Spiritual summary API placeholder — real logic will be implemented later.",
-    },
-    { status: 200 }
-  );
-};
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    status: "ready",
+    data: [],
+  });
+}

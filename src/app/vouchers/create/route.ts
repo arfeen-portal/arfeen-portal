@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const supabase = supabaseAdmin;
+  const supabase = getSupabaseAdmin();
   if (!supabase) {
     return NextResponse.json(
       { error: "SERVICE_UNAVAILABLE" },
