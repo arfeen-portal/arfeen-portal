@@ -1,34 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+import { requireAccountant } from "@/lib/auth/guards";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+function jsonError(message: string, status = 400) {
+  return NextResponse.json(
+    {
+      success: false,
+      ok: false,
+      error: message,
+    },
+    { status }
+  );
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const authUser =
+      await requireAccountant();
+
+    const supabase =
+      getSupabaseAdminSafe();
 
     if (!supabase) {
-      return NextResponse.json(
-        { error: "Supabase admin not configured" },
-        { status: 500 }
+      return jsonError(
+        "Supabase admin not configured",
+        500
       );
     }
 
-    const { searchParams } = new URL(req.url);
-    const tenantId = searchParams.get("tenant_id");
+    const tenantId =
+      authUser.tenantId;
 
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: "tenant_id is required" },
-        { status: 400 }
+    const isGlobalAdmin =
+      authUser.role ===
+        "super_admin" ||
+      authUser.role === "admin";
+
+    if (!tenantId && !isGlobalAdmin) {
+      return jsonError(
+        "Tenant not assigned to this user.",
+        403
       );
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("v_account_balances")
-      .select("*")
-      .eq("tenant_id", tenantId);
+      .select("*");
+
+    if (tenantId) {
+      query = query.eq(
+        "tenant_id",
+        tenantId
+      );
+    }
+
+    const { data, error } =
+      await query;
 
     if (error) {
       throw error;
@@ -36,35 +66,78 @@ export async function GET(req: NextRequest) {
 
     const rows = data || [];
 
-    const assets = rows.filter((r: any) =>
-      ["asset", "assets"].includes(String(r.account_type || "").toLowerCase())
+    const assets = rows.filter(
+      (r: any) =>
+        ["asset", "assets"].includes(
+          String(
+            r.account_type || ""
+          ).toLowerCase()
+        )
     );
 
-    const liabilities = rows.filter((r: any) =>
-      ["liability", "liabilities"].includes(String(r.account_type || "").toLowerCase())
+    const liabilities =
+      rows.filter((r: any) =>
+        [
+          "liability",
+          "liabilities",
+        ].includes(
+          String(
+            r.account_type || ""
+          ).toLowerCase()
+        )
+      );
+
+    const equity = rows.filter(
+      (r: any) =>
+        ["equity"].includes(
+          String(
+            r.account_type || ""
+          ).toLowerCase()
+        )
     );
 
-    const equity = rows.filter((r: any) =>
-      ["equity"].includes(String(r.account_type || "").toLowerCase())
-    );
+    const totalAssets =
+      assets.reduce(
+        (
+          sum: number,
+          row: any
+        ) =>
+          sum +
+          Number(
+            row.balance || 0
+          ),
+        0
+      );
 
-    const totalAssets = assets.reduce(
-      (sum: number, row: any) => sum + Number(row.balance || 0),
-      0
-    );
+    const totalLiabilities =
+      liabilities.reduce(
+        (
+          sum: number,
+          row: any
+        ) =>
+          sum +
+          Number(
+            row.balance || 0
+          ),
+        0
+      );
 
-    const totalLiabilities = liabilities.reduce(
-      (sum: number, row: any) => sum + Number(row.balance || 0),
-      0
-    );
-
-    const totalEquity = equity.reduce(
-      (sum: number, row: any) => sum + Number(row.balance || 0),
-      0
-    );
+    const totalEquity =
+      equity.reduce(
+        (
+          sum: number,
+          row: any
+        ) =>
+          sum +
+          Number(
+            row.balance || 0
+          ),
+        0
+      );
 
     return NextResponse.json({
       success: true,
+      ok: true,
       assets,
       liabilities,
       equity,
@@ -72,13 +145,26 @@ export async function GET(req: NextRequest) {
       totalLiabilities,
       totalEquity,
       balanced:
-        Number(totalAssets.toFixed(2)) ===
-        Number((totalLiabilities + totalEquity).toFixed(2)),
+        Number(
+          totalAssets.toFixed(2)
+        ) ===
+        Number(
+          (
+            totalLiabilities +
+            totalEquity
+          ).toFixed(2)
+        ),
+      tenant_id: tenantId,
+      role: authUser.role,
+      scope: tenantId
+        ? "tenant"
+        : "global_admin",
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || "Failed to fetch balance sheet" },
-      { status: 500 }
+    return jsonError(
+      error?.message ||
+        "Failed to fetch balance sheet",
+      500
     );
   }
 }

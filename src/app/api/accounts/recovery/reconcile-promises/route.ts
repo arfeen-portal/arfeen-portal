@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+import { requireAccountant } from "@/lib/auth/guards";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -8,28 +9,40 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export async function POST(req: Request) {
+function jsonError(message: string, status = 400) {
+  return NextResponse.json({ success: false, ok: false, error: message }, { status });
+}
+
+async function runReconcile(runDate: string) {
+  const authUser = await requireAccountant();
+
   const supabase = getSupabaseAdminSafe();
   if (!supabase) {
-    return NextResponse.json({ success: false, error: "Supabase admin client not configured." }, { status: 500 });
+    return jsonError("Supabase admin client not configured.", 500);
   }
 
-  const body = await req.json().catch(() => ({}));
-  const tenantId = body.tenant_id || "";
-  const runDate = body.run_date || todayISO();
+  const tenantId = authUser.tenantId;
+  const isGlobalAdmin = authUser.role === "super_admin" || authUser.role === "admin";
 
-  if (!tenantId) {
-    return NextResponse.json({ success: false, error: "tenant_id is required." }, { status: 400 });
+  if (!tenantId && !isGlobalAdmin) {
+    return jsonError("Tenant not assigned to this user.", 403);
   }
 
-  const { data: promises, error } = await supabase
+  let query = supabase
     .from("finance_recovery_promises")
     .select("*")
-    .eq("tenant_id", tenantId)
     .eq("status", "promised")
     .lt("promised_date", runDate);
 
-  if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  if (tenantId) {
+    query = query.eq("tenant_id", tenantId);
+  }
+
+  const { data: promises, error } = await query;
+
+  if (error) {
+    return jsonError(error.message, 500);
+  }
 
   const updated: any[] = [];
 
@@ -62,26 +75,40 @@ export async function POST(req: Request) {
         agent_name: p.agent_name,
         broken_count: brokenCount,
         legal_triggered: legalTriggered,
-        escalation_message: `Hi ${p.agent_name || p.customer_name || ""}, aapne payment ka promise kiya tha lekin system mein payment verified nahi hui. Please update payment status.`,
+        escalation_message: `Hi ${
+          p.agent_name || p.customer_name || ""
+        }, aapne payment ka promise kiya tha lekin system mein payment verified nahi hui. Please update payment status.`,
       });
     }
   }
 
   return NextResponse.json({
     success: true,
+    ok: true,
     checked: promises?.length || 0,
     broken_promises: updated.length,
     updated,
+    tenant_id: tenantId,
+    role: authUser.role,
+    scope: tenantId ? "tenant" : "global_admin",
   });
 }
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const tenant_id = searchParams.get("tenant_id") || "";
-  const fakeReq = new Request(req.url, {
-    method: "POST",
-    body: JSON.stringify({ tenant_id }),
-  });
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const runDate = body.run_date || todayISO();
 
-  return POST(fakeReq);
+    return await runReconcile(runDate);
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : "Unauthorized.", 401);
+  }
+}
+
+export async function GET() {
+  try {
+    return await runReconcile(todayISO());
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : "Unauthorized.", 401);
+  }
 }

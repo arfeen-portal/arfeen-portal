@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+import { requireRole } from "@/lib/auth/guards";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const runtime = "nodejs";
 
 type BookingPayload = {
+  tenant_id: string | null;
   customer_name: string;
   customer_phone: string;
+  agent_id: string | null;
   agent_name: string | null;
   agent_code: string | null;
   pickup_city: string;
@@ -21,24 +28,27 @@ type BookingPayload = {
   status: string;
 };
 
-function getSupabaseServerClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRole =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE ||
-    process.env.SUPABASE_SECRET_KEY;
-
-  if (!url || !serviceRole) {
-    console.error("Missing Supabase env vars for transport create route");
-    return null;
-  }
-
-  return createClient(url, serviceRole, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
+function jsonError(message: string, status = 400, extra?: Record<string, unknown>) {
+  return NextResponse.json(
+    {
+      ok: false,
+      success: false,
+      error: message,
+      ...(extra || {}),
     },
-  });
+    { status }
+  );
+}
+
+function jsonOk(data: Record<string, unknown>, status = 200) {
+  return NextResponse.json(
+    {
+      ok: true,
+      success: true,
+      ...data,
+    },
+    { status }
+  );
 }
 
 function toStringOrEmpty(value: unknown): string {
@@ -80,7 +90,7 @@ function normalizeStatus(value: unknown): string {
   return status || "pending";
 }
 
-function buildPayload(body: any): BookingPayload | null {
+function buildPayload(body: any, tenantId: string | null): BookingPayload | null {
   const customer_name = toStringOrEmpty(body.customer_name);
   const customer_phone = toStringOrEmpty(body.customer_phone);
   const pickup_city = toStringOrEmpty(body.pickup_city);
@@ -104,8 +114,10 @@ function buildPayload(body: any): BookingPayload | null {
   }
 
   return {
+    tenant_id: tenantId,
     customer_name,
     customer_phone,
+    agent_id: toNullableString(body.agent_id),
     agent_name: toNullableString(body.agent_name),
     agent_code: toNullableString(body.agent_code),
     pickup_city,
@@ -126,58 +138,61 @@ function buildPayload(body: any): BookingPayload | null {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getSupabaseServerClient();
+    const authUser = await requireRole([
+      "super_admin",
+      "admin",
+      "operations",
+      "agent",
+    ]);
+
+    const supabase = getSupabaseAdminSafe();
 
     if (!supabase) {
-      return NextResponse.json(
-        { error: "Supabase server client is not configured" },
-        { status: 500 }
-      );
+      return jsonError("Supabase admin client is not configured.", 500);
     }
 
-    const body = await req.json();
-    const payload = buildPayload(body);
+    const tenantId = authUser.tenantId;
+
+    if (!tenantId && authUser.role !== "super_admin") {
+      return jsonError("Tenant not assigned to this user.", 403);
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const payload = buildPayload(body, tenantId);
 
     if (!payload) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing or invalid required fields: customer_name, customer_phone, pickup_city, dropoff_city, pickup_location, dropoff_location, pickup_time, vehicle_type",
-        },
-        { status: 400 }
+      return jsonError(
+        "Missing or invalid required fields: customer_name, customer_phone, pickup_city, dropoff_city, pickup_location, dropoff_location, pickup_time, vehicle_type",
+        400
       );
     }
 
     const { data, error } = await supabase
       .from("transport_bookings")
       .insert([payload])
-      .select()
+      .select("*")
       .single();
 
     if (error) {
-      console.error("Create booking error:", error);
-      return NextResponse.json(
-        { error: error.message || "Failed to create booking" },
-        { status: 500 }
-      );
+      return jsonError("Failed to create booking.", 500, {
+        details: error.message,
+      });
     }
 
-    return NextResponse.json(
+    return jsonOk(
       {
-        success: true,
-        message: "Booking created successfully",
+        message: "Booking created successfully.",
         booking: data,
+        tenant_id: tenantId,
+        role: authUser.role,
+        scope: tenantId ? "tenant" : "global_admin",
       },
-      { status: 201 }
+      201
     );
-  } catch (error: any) {
-    console.error("Unexpected create booking route error:", error);
-
-    return NextResponse.json(
-      {
-        error: error?.message || "Internal server error",
-      },
-      { status: 500 }
+  } catch (error) {
+    return jsonError(
+      error instanceof Error ? error.message : "Unauthorized.",
+      401
     );
   }
 }

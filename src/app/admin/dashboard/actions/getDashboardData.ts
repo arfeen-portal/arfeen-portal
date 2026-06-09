@@ -1,18 +1,29 @@
 "use server";
 
-import { supabaseClient } from "@/lib/supabaseClient";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export async function getDashboardData() {
-  const supabase = supabaseClient;
+  const supabase = getSupabaseAdminSafe();
+
+  if (!supabase) {
+    return {
+      todayTransport: 0,
+      todayPackages: 0,
+      totalRevenue: 0,
+      topRoutes: [],
+      error: "Supabase admin client is not configured.",
+    };
+  }
 
   const today = new Date().toISOString().split("T")[0];
 
-  const { count: todayTransport = 0 } = await supabase
+  const { count: todayTransport } = await supabase
     .from("transport_bookings")
     .select("*", { count: "exact", head: true })
-    .eq("date", today);
+    .gte("pickup_time", `${today}T00:00:00`)
+    .lt("pickup_time", `${today}T23:59:59`);
 
-  const { count: todayPackages = 0 } = await supabase
+  const { count: todayPackages } = await supabase
     .from("umrah_bookings")
     .select("*", { count: "exact", head: true })
     .eq("start_date", today);
@@ -22,9 +33,9 @@ export async function getDashboardData() {
     .select("amount");
 
   const totalRevenue =
-    !revenueError && revenueData
+    !revenueError && Array.isArray(revenueData)
       ? revenueData.reduce(
-          (sum, row: { amount: number | null }) => sum + (row.amount ?? 0),
+          (sum, row: { amount: number | null }) => sum + Number(row.amount ?? 0),
           0
         )
       : 0;
@@ -36,8 +47,8 @@ export async function getDashboardData() {
   ];
 
   return {
-    todayTransport,
-    todayPackages,
+    todayTransport: todayTransport ?? 0,
+    todayPackages: todayPackages ?? 0,
     totalRevenue,
     topRoutes,
   };

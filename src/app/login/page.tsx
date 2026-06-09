@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { FormEvent, useMemo, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 import {
   ArrowRight,
   Building2,
@@ -11,25 +11,76 @@ import {
   Sparkles,
 } from "lucide-react";
 
-const supabase =
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ? createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      )
-    : null;
+type UserRole =
+  | "super_admin"
+  | "admin"
+  | "accountant"
+  | "operations"
+  | "agent"
+  | "staff"
+  | "driver";
+
+type UserProfile = {
+  id?: string;
+  email?: string;
+  role: UserRole;
+  tenant_id?: string | null;
+};
+
+function getSupabaseBrowserClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) return null;
+
+  return createBrowserClient(url, anonKey);
+}
+
+function getRedirectPath(role: UserRole, nextPath: string | null) {
+  if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
+    if (role === "super_admin" || role === "admin") return nextPath;
+    if (role === "accountant" && nextPath.startsWith("/accounts")) {
+      return nextPath;
+    }
+    if (role === "operations" && nextPath.startsWith("/operations")) {
+      return nextPath;
+    }
+    if (role === "agent" && nextPath.startsWith("/agent")) {
+      return nextPath;
+    }
+  }
+
+  switch (role) {
+    case "super_admin":
+    case "admin":
+      return "/admin";
+
+    case "accountant":
+      return "/accounts";
+
+    case "operations":
+      return "/operations";
+
+    case "agent":
+      return "/agent/dashboard";
+
+    default:
+      return "/";
+  }
+}
 
 export default function LoginPage() {
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError("");
     setBusy(true);
+    setError("");
 
     try {
       if (!supabase) {
@@ -37,53 +88,67 @@ export default function LoginPage() {
         return;
       }
 
+      const normalizedEmail = email.trim().toLowerCase();
+
       const { data, error: loginError } =
         await supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
+          email: normalizedEmail,
           password,
         });
 
-      if (loginError || !data.session) {
-        setError(loginError?.message || "Login failed.");
+      if (loginError) {
+        setError(loginError.message || "Login failed.");
         return;
       }
 
-      const token = data.session.access_token;
+      if (!data.session?.access_token || !data.user?.email) {
+        setError("Session was not created.");
+        return;
+      }
 
-      const meRes = await fetch("/api/agent/me", {
+      // Wait for auth cookie/session sync
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      const profileRes = await fetch("/api/auth/login-profile", {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${data.session.access_token}`,
         },
       });
 
-      const me = await meRes.json();
+      const profileJson = await profileRes
+        .json()
+        .catch(() => ({}));
 
-      if (me.ok && me.user?.role === "agent") {
-        window.location.href = "/agent/dashboard";
+      if (!profileRes.ok || !profileJson?.ok) {
+        setError(
+          profileJson?.error ||
+            "User profile could not be loaded."
+        );
         return;
       }
 
-      const adminRes = await fetch("/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }).catch(() => null);
+      const profile = profileJson.user as UserProfile;
 
-      if (adminRes?.ok) {
-        const adminMe = await adminRes.json();
-        if (adminMe?.user?.role === "admin") {
-          window.location.href = "/admin/dashboard";
-          return;
-        }
-        if (adminMe?.user?.role === "accountant") {
-          window.location.href = "/accounts";
-          return;
-        }
+      if (!profile?.role) {
+        setError("User role not found.");
+        return;
       }
 
-      window.location.href = "/accounts";
+      const params = new URLSearchParams(window.location.search);
+      const nextPath = params.get("next");
+
+      const redirectPath = getRedirectPath(
+        profile.role,
+        nextPath
+      );
+
+      window.location.href = redirectPath;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong."
+      );
     } finally {
       setBusy(false);
     }
@@ -94,6 +159,7 @@ export default function LoginPage() {
       <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
         <section className="relative hidden overflow-hidden lg:block">
           <div className="absolute inset-0 bg-gradient-to-br from-[#07101d] via-[#111d33] to-[#020617]" />
+
           <div className="absolute left-16 top-16 h-72 w-72 rounded-full bg-amber-400/20 blur-3xl" />
           <div className="absolute bottom-16 right-12 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
 
@@ -103,8 +169,12 @@ export default function LoginPage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-400 text-slate-950">
                   <Building2 size={24} />
                 </div>
+
                 <div>
-                  <h1 className="text-xl font-black">Arfeen Travel Portal</h1>
+                  <h1 className="text-xl font-black">
+                    Arfeen Travel Portal
+                  </h1>
+
                   <p className="text-sm text-slate-300">
                     B2B Umrah, Transport & Accounts ERP
                   </p>
@@ -113,22 +183,26 @@ export default function LoginPage() {
 
               <div className="mt-24 max-w-xl">
                 <p className="text-sm font-bold uppercase tracking-[0.35em] text-amber-300">
-                  Secure Agent Access
+                  Secure Portal Access
                 </p>
+
                 <h2 className="mt-5 text-5xl font-black leading-tight">
-                  Separate, clean and professional login for every agent.
+                  Separate, clean and professional
+                  login for every role.
                 </h2>
+
                 <p className="mt-6 text-lg leading-8 text-slate-300">
-                  Agents see only their bookings, ledger, invoices, packages and
-                  hotel demands. Admin keeps full control from the main portal.
+                  Super admin, admin, accountant,
+                  operations and agents are redirected
+                  to their own protected workspaces.
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               {[
-                ["Role Guarded", "Agent/Admin separation"],
-                ["Private Data", "Agent-wise filtering"],
+                ["Role Guarded", "Admin/Agent separation"],
+                ["Private Data", "Tenant-wise filtering"],
                 ["White Label", "Portal branding ready"],
               ].map((item) => (
                 <div
@@ -136,7 +210,10 @@ export default function LoginPage() {
                   className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur"
                 >
                   <p className="font-bold">{item[0]}</p>
-                  <p className="mt-2 text-sm text-slate-300">{item[1]}</p>
+
+                  <p className="mt-2 text-sm text-slate-300">
+                    {item[1]}
+                  </p>
                 </div>
               ))}
             </div>
@@ -153,9 +230,14 @@ export default function LoginPage() {
                 <ShieldCheck size={16} />
                 Secure Portal Login
               </div>
-              <h1 className="text-3xl font-black">Welcome back</h1>
+
+              <h1 className="text-3xl font-black">
+                Welcome back
+              </h1>
+
               <p className="mt-2 text-sm text-slate-500">
-                Login to continue to your Arfeen Travel workspace.
+                Login to continue to your
+                Arfeen Travel workspace.
               </p>
             </div>
 
@@ -170,15 +252,23 @@ export default function LoginPage() {
                 <span className="mb-2 block text-sm font-bold text-slate-700">
                   Email Address
                 </span>
+
                 <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
-                  <Mail size={18} className="text-slate-400" />
+                  <Mail
+                    size={18}
+                    className="text-slate-400"
+                  />
+
                   <input
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) =>
+                      setEmail(e.target.value)
+                    }
                     type="email"
+                    autoComplete="email"
                     required
                     className="h-12 w-full bg-transparent text-sm font-semibold outline-none"
-                    placeholder="agent@example.com"
+                    placeholder="admin@arfeentravel.com"
                   />
                 </div>
               </label>
@@ -187,12 +277,20 @@ export default function LoginPage() {
                 <span className="mb-2 block text-sm font-bold text-slate-700">
                   Password
                 </span>
+
                 <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
-                  <Lock size={18} className="text-slate-400" />
+                  <Lock
+                    size={18}
+                    className="text-slate-400"
+                  />
+
                   <input
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) =>
+                      setPassword(e.target.value)
+                    }
                     type="password"
+                    autoComplete="current-password"
                     required
                     className="h-12 w-full bg-transparent text-sm font-semibold outline-none"
                     placeholder="••••••••"
@@ -202,21 +300,24 @@ export default function LoginPage() {
             </div>
 
             <button
+              type="submit"
               disabled={busy}
-              className="mt-7 flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg transition hover:bg-slate-800 disabled:opacity-60"
+              className="mt-7 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg transition hover:bg-slate-800 disabled:opacity-60"
             >
               {busy ? "Signing in..." : "Login to Portal"}
+
               <ArrowRight size={18} />
             </button>
 
             <div className="mt-6 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
               <div className="flex gap-2 font-bold">
                 <Sparkles size={16} />
-                Agent access is protected.
+                Protected role-based access.
               </div>
+
               <p className="mt-1 text-amber-800">
-                Your dashboard will only show data connected to your agent
-                account.
+                Your portal will only show data
+                and pages allowed for your role.
               </p>
             </div>
           </form>
