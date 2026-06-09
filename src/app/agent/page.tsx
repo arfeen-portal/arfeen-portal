@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export default async function AgentDashboardPage() {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   // yahan tum current logged-in agent ko identify karoge (auth se)
   const {

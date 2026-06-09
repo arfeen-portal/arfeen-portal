@@ -2,343 +2,674 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { getSupabaseClient } from '@/lib/supabaseClient';
-const supabase = getSupabaseClient();
-type BookingStatus = "pending" | "confirmed" | "cancelled";
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Banknote,
+  BrainCircuit,
+  Bus,
+  Car,
+  Flame,
+  Globe2,
+  Receipt,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-interface DashboardBookingRow {
+type TrendPoint = {
+  name: string;
+  revenue: number;
+  profit: number;
+  bookings: number;
+};
+
+type TopRoute = {
+  route: string;
+  amount: number;
+  bookings: number;
+};
+
+type RecentBooking = {
   id: string;
-  created_at: string;
-  status: BookingStatus;
-  passengers: number;
-  package_code: string | null;
-  package_origin: string | null;
-  package_dates: string | null;
+  customer_name: string | null;
+  agent_name: string | null;
+  pickup_city: string | null;
+  dropoff_city: string | null;
+  vehicle_type: string | null;
+  pickup_time: string | null;
+  total_price: number | null;
+  status: string | null;
+};
+
+type DashboardData = {
+  success: boolean;
+  stats: {
+    totalRevenue: number;
+    currentRevenue: number;
+    totalBookings: number;
+    currentBookings: number;
+    activeAgents: number;
+    revenueChange: number;
+    bookingsChange: number;
+  } | null;
+  ai: {
+    activeProfitLeaks: number;
+    recoveryAtRisk: number;
+    priorityAction: string;
+  } | null;
+  revenueTrend: TrendPoint[];
+  topRoutes: TopRoute[];
+  recentBookings: RecentBooking[];
+  error?: string;
+};
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
 }
 
-interface PackageSummaryRow {
-  id: string;
-  code: string | null;
-  origin_city: string | null;
-  date_range: string | null;
+function formatMoney(value: number) {
+  return `PKR ${Math.round(Number(value || 0)).toLocaleString("en-PK")}`;
 }
 
-function formatDateTime(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatNumber(value: number) {
+  return Number(value || 0).toLocaleString("en-PK");
+}
+
+function compact(value: number) {
+  return new Intl.NumberFormat("en", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(Number(value || 0));
+}
+
+function SkeletonBox({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "animate-pulse rounded-[28px] bg-slate-200/80",
+        className
+      )}
+    />
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="min-h-screen space-y-6 bg-slate-50 p-4 sm:p-6">
+      <SkeletonBox className="h-52 w-full rounded-[34px]" />
+
+      <section className="grid gap-6 lg:grid-cols-3">
+        <SkeletonBox className="h-56 lg:col-span-2" />
+        <SkeletonBox className="h-56" />
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SkeletonBox className="h-40" />
+        <SkeletonBox className="h-40" />
+        <SkeletonBox className="h-40" />
+        <SkeletonBox className="h-40" />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-12">
+        <SkeletonBox className="h-[420px] xl:col-span-8" />
+        <SkeletonBox className="h-[420px] xl:col-span-4" />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-12">
+        <SkeletonBox className="h-[420px] xl:col-span-8" />
+        <SkeletonBox className="h-[420px] xl:col-span-4" />
+      </section>
+    </div>
+  );
+}
+
+function StatCard({
+  title,
+  value,
+  subtext,
+  trend,
+  icon: Icon,
+}: {
+  title: string;
+  value: string;
+  subtext: string;
+  trend: number;
+  icon: React.ElementType;
+}) {
+  const isUp = trend >= 0;
+
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+          <Icon className="h-6 w-6" />
+        </div>
+
+        <div
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-black",
+            isUp ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+          )}
+        >
+          {isUp ? (
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          ) : (
+            <ArrowDownRight className="h-3.5 w-3.5" />
+          )}
+          {trend.toFixed(1)}%
+        </div>
+      </div>
+
+      <p className="mt-5 text-sm font-semibold text-slate-500">{title}</p>
+      <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+        {value}
+      </h3>
+      <p className="mt-2 text-sm leading-5 text-slate-500">{subtext}</p>
+    </div>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm font-medium text-slate-500">
+      {text}
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string | null }) {
+  const clean = status || "pending";
+
+  return (
+    <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-black uppercase text-slate-700 shadow-sm">
+      {clean}
+    </span>
+  );
 }
 
 export default function AdminDashboardPage() {
-  const [bookings, setBookings] = useState<DashboardBookingRow[]>([]);
-  const [packages, setPackages] = useState<PackageSummaryRow[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError(null);
+    let alive = true;
 
+    async function loadDashboard() {
       try {
-        // ✅ IMPORTANT: create client inside effect (not top-level)
-        const client = supabase;
+        const res = await fetch("/api/admin/dashboard", { cache: "no-store" });
+        const json = (await res.json()) as DashboardData;
 
-        if (!supabase) {
-          setError(
-            "Supabase is not configured. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel."
-          );
-          setLoading(false);
-          return;
+        if (alive) setData(json);
+      } catch {
+        if (alive) {
+          setData({
+            success: false,
+            stats: null,
+            ai: null,
+            revenueTrend: [],
+            topRoutes: [],
+            recentBookings: [],
+            error: "Unable to load dashboard",
+          });
         }
-
-        // BOOKINGS
-        const { data: bookingRows, error: bookingError } = await supabase
-          .from("umrah_bookings")
-          .select(
-            "id, created_at, status, passengers, umrah_packages:package_id ( code, origin_city, date_range )"
-          )
-          .order("created_at", { ascending: false })
-          .limit(20);
-
-        if (bookingError) throw bookingError;
-
-        const mappedBookings: DashboardBookingRow[] =
-          (bookingRows as any[])?.map((row: any) => {
-            const pkg = row.umrah_packages;
-            return {
-              id: row.id,
-              created_at: row.created_at,
-              status: (row.status ?? "pending") as BookingStatus,
-              passengers: row.passengers ?? 1,
-              package_code: pkg?.code ?? null,
-              package_origin: pkg?.origin_city ?? null,
-              package_dates: pkg?.date_range ?? null,
-            };
-          }) ?? [];
-
-        setBookings(mappedBookings);
-
-        // PACKAGES
-        const { data: packageRows, error: packageError } = await supabase
-          .from("umrah_packages")
-          .select("id, code, origin_city, date_range");
-
-        if (packageError) throw packageError;
-
-        const mappedPackages: PackageSummaryRow[] =
-          (packageRows as any[])?.map((p: any) => ({
-            id: p.id,
-            code: p.code ?? null,
-            origin_city: p.origin_city ?? null,
-            date_range: p.date_range ?? null,
-          })) ?? [];
-
-        setPackages(mappedPackages);
-      } catch (err: any) {
-        console.error(err);
-        setError("Failed to load dashboard data from Supabase.");
       } finally {
-        setLoading(false);
+        if (alive) setLoading(false);
       }
-    };
+    }
 
-    load();
+    loadDashboard();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  const bookingStats = useMemo(() => {
-    const total = bookings.length;
-    let pending = 0;
-    let confirmed = 0;
-    let cancelled = 0;
-    let passengers = 0;
+  const stats = data?.stats ?? {
+    totalRevenue: 0,
+    currentRevenue: 0,
+    totalBookings: 0,
+    currentBookings: 0,
+    activeAgents: 0,
+    revenueChange: 0,
+    bookingsChange: 0,
+  };
 
-    for (const b of bookings) {
-      passengers += b.passengers || 0;
-      if (b.status === "pending") pending++;
-      if (b.status === "confirmed") confirmed++;
-      if (b.status === "cancelled") cancelled++;
-    }
+  const ai = data?.ai ?? {
+    activeProfitLeaks: 0,
+    recoveryAtRisk: 0,
+    priorityAction: "Normal",
+  };
 
-    return { total, pending, confirmed, cancelled, passengers };
-  }, [bookings]);
+  const revenueTrend = data?.revenueTrend ?? [];
+  const topRoutes = data?.topRoutes ?? [];
+  const recentBookings = data?.recentBookings ?? [];
 
-  const totalPackages = packages.length;
+  const healthScore = useMemo(() => {
+    let score = 94;
 
-  const topPackages = useMemo(() => {
-    const map = new Map<string, { code: string; count: number }>();
-    for (const b of bookings) {
-      if (!b.package_code) continue;
-      const key = b.package_code;
-      if (!map.has(key)) map.set(key, { code: key, count: 0 });
-      map.get(key)!.count += 1;
-    }
-    const arr = Array.from(map.values());
-    arr.sort((a, b) => b.count - a.count);
-    return arr.slice(0, 5);
-  }, [bookings]);
+    if (ai.activeProfitLeaks >= 10) score -= 18;
+    else if (ai.activeProfitLeaks >= 4) score -= 10;
+
+    if (ai.recoveryAtRisk >= 1_000_000) score -= 14;
+    else if (ai.recoveryAtRisk >= 500_000) score -= 8;
+
+    if (stats.revenueChange < 0) score -= 8;
+    if (stats.bookingsChange < 0) score -= 6;
+
+    return Math.max(45, Math.min(99, score));
+  }, [ai.activeProfitLeaks, ai.recoveryAtRisk, stats.revenueChange, stats.bookingsChange]);
+
+  if (loading) return <DashboardSkeleton />;
 
   return (
-    <main className="min-h-screen bg-slate-100 pb-12">
-      <div className="mx-auto max-w-6xl px-4 pt-8">
-        {/* HEADER */}
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+    <div className="min-h-screen space-y-6 bg-slate-50 p-4 sm:p-6">
+      {data && !data.success ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+          Dashboard data could not be fully loaded. Showing safe fallback values.
+        </div>
+      ) : null}
+
+      <section className="overflow-hidden rounded-[34px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-5 text-white shadow-2xl sm:p-7">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-black text-slate-200">
+              <Globe2 className="h-4 w-4" />
+              Arfeen Travel AI Command Center
+            </div>
+
+            <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
               Admin Dashboard
             </h1>
-            <p className="mt-1 text-xs md:text-sm text-slate-500">
-              High-level overview of Umrah packages, bookings and recent
-              activity.
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+              Live command view for revenue, bookings, active agents, top routes,
+              transport operations, profit leak risk, and AI recovery priorities.
             </p>
           </div>
 
-          <div className="rounded-full bg-slate-900 px-4 py-2 text-[11px] font-semibold text-slate-100">
-            Arfeen Travel &amp; Tours • Super Admin
-          </div>
-        </header>
+          <div className="grid gap-3 sm:grid-cols-3 xl:w-[520px]">
+            <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                System Health
+              </p>
+              <p className="mt-2 text-3xl font-black">{healthScore}%</p>
+            </div>
 
-        {/* STATS CARDS */}
-        <section className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase">
-              Total Packages
+            <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                AI Priority
+              </p>
+              <p className="mt-2 text-3xl font-black">{ai.priorityAction}</p>
             </div>
-            <div className="mt-1 text-2xl font-bold text-slate-900">
-              {totalPackages}
-            </div>
-            <div className="mt-1 text-[11px] text-slate-400">
-              Umrah packages configured
-            </div>
-          </div>
 
-          <div className="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase">
-              Bookings (Last 20)
-            </div>
-            <div className="mt-1 text-2xl font-bold text-slate-900">
-              {bookingStats.total}
-            </div>
-            <div className="mt-1 text-[11px] text-slate-400">
-              Passengers: {bookingStats.passengers}
+            <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                Active Agents
+              </p>
+              <p className="mt-2 text-3xl font-black">
+                {formatNumber(stats.activeAgents)}
+              </p>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase">
-              Pending
+      <section className="grid gap-6 lg:grid-cols-3">
+        <div className="rounded-[32px] bg-slate-950 p-5 text-white shadow-xl sm:p-6 lg:col-span-2">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <Flame className="h-6 w-6 text-red-500" />
+              <h2 className="text-xl font-black">
+                AI Profit Leak & Risk Center
+              </h2>
             </div>
-            <div className="mt-1 text-2xl font-bold text-amber-700">
-              {bookingStats.pending}
-            </div>
-          </div>
 
-          <div className="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase">
-              Confirmed
-            </div>
-            <div className="mt-1 text-2xl font-bold text-emerald-700">
-              {bookingStats.confirmed}
-            </div>
-          </div>
-        </section>
-
-        {/* QUICK LINKS */}
-        <section className="mb-6 rounded-2xl border bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-800 mb-2">
-            Quick Actions
-          </h2>
-          <div className="flex flex-wrap gap-2 text-xs">
             <Link
-              href="/umrah-packages"
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700 hover:border-slate-300"
+              href="/accounts/profit-leaks"
+              className="w-fit rounded-xl bg-white px-4 py-2 text-xs font-black text-slate-950 transition hover:bg-slate-100"
             >
-              View Packages (Public)
-            </Link>
-            <Link
-              href="/umrah-packages/book"
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700 hover:border-slate-300"
-            >
-              Booking Form (Public)
-            </Link>
-            <Link
-              href="/admin/umrah-bookings"
-              className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-semibold text-emerald-700 hover:border-emerald-300"
-            >
-              Manage Bookings
-            </Link>
-            <Link
-              href="/admin/agent-analytics"
-              className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 font-semibold text-sky-700 hover:border-sky-300"
-            >
-              Agent Analytics
+              Analyze Leaks →
             </Link>
           </div>
-        </section>
 
-        {/* TOP PACKAGES */}
-        <div className="rounded-2xl border bg-white p-4 shadow-sm mb-6">
-          <h2 className="text-sm font-semibold text-slate-800 mb-2">
-            Top Packages by Bookings (Last 20)
-          </h2>
-          {topPackages.length === 0 ? (
-            <div className="text-xs text-slate-500">No booking data yet.</div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                Active Profit Leaks
+              </p>
+              <p className="mt-2 text-4xl font-black text-red-400">
+                {formatNumber(ai.activeProfitLeaks)}
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                Open cases requiring finance action.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                Recovery At Risk
+              </p>
+              <p className="mt-2 text-3xl font-black text-amber-400">
+                {formatMoney(ai.recoveryAtRisk)}
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                Estimated open leakage exposure.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                Next Best Action
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-slate-200">
+                Review open leaks, freeze risky commissions, and escalate overdue
+                recovery cases.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[32px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-center gap-2">
+            <BrainCircuit className="h-5 w-5 text-indigo-600" />
+            <h3 className="font-black text-slate-900">AI Operations Alerts</h3>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {[
+              "Review high-risk agent balances",
+              "Check unassigned transport bookings",
+              "Audit current month profit margin",
+            ].map((item) => (
+              <div
+                key={item}
+                className="flex gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-semibold leading-5 text-slate-700"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          title="Total Revenue"
+          value={formatMoney(stats.totalRevenue)}
+          subtext="All transport booking revenue"
+          icon={Banknote}
+          trend={stats.revenueChange}
+        />
+
+        <StatCard
+          title="This Month Revenue"
+          value={formatMoney(stats.currentRevenue)}
+          subtext={`${formatNumber(stats.currentBookings)} bookings this month`}
+          icon={TrendingUp}
+          trend={stats.revenueChange}
+        />
+
+        <StatCard
+          title="Total Bookings"
+          value={formatNumber(stats.totalBookings)}
+          subtext="Total transport booking records"
+          icon={Receipt}
+          trend={stats.bookingsChange}
+        />
+
+        <StatCard
+          title="Active Agents"
+          value={formatNumber(stats.activeAgents)}
+          subtext="Currently active agents in system"
+          icon={Users}
+          trend={0}
+        />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-12">
+        <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm xl:col-span-8">
+          <div className="mb-5">
+            <h2 className="text-lg font-black text-slate-900">
+              Revenue & Profit Trend
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Last 6 months commercial movement
+            </p>
+          </div>
+
+          {revenueTrend.length ? (
+            <div className="h-[340px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueTrend}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                  <YAxis
+                    tickFormatter={(value) => compact(Number(value))}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => formatMoney(value)}
+                    contentStyle={{
+                      borderRadius: 16,
+                      border: "1px solid #e2e8f0",
+                      boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    strokeWidth={3}
+                    fillOpacity={0.18}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="profit"
+                    strokeWidth={2.5}
+                    fillOpacity={0.1}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <ul className="space-y-1 text-xs">
-              {topPackages.map((p) => (
-                <li
-                  key={p.code}
-                  className="flex items-center justify-between border-b last:border-b-0 py-1"
-                >
-                  <span className="font-semibold text-slate-800">{p.code}</span>
-                  <span className="text-[11px] text-slate-500">
-                    {p.count} bookings
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <EmptyState text="No revenue trend data found yet." />
           )}
         </div>
 
-        {/* LATEST BOOKINGS TABLE */}
-        <section className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-800">
-              Latest bookings
-            </h2>
+        <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm xl:col-span-4">
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-900">Top Routes</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Highest revenue travel routes
+              </p>
+            </div>
+
             <Link
-              href="/admin/umrah-bookings"
-              className="text-[11px] font-semibold text-emerald-700 hover:underline"
+              href="/admin/reports/travel"
+              className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
             >
-              View all
+              Report
             </Link>
           </div>
 
-          {error ? (
-            <div className="p-6 text-xs text-red-600">{error}</div>
-          ) : loading ? (
-            <div className="p-6 text-xs text-slate-500">Loading dashboard data...</div>
-          ) : bookings.length === 0 ? (
-            <div className="p-6 text-xs text-slate-500">No bookings found yet.</div>
-          ) : (
+          <div className="space-y-3">
+            {topRoutes.length ? (
+              topRoutes.map((item, index) => (
+                <div
+                  key={item.route}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 p-4"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-black text-slate-900">
+                      {index + 1}. {item.route}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">
+                      {formatNumber(item.bookings)} bookings
+                    </p>
+                  </div>
+
+                  <p className="shrink-0 text-right text-sm font-black text-slate-900">
+                    {formatMoney(item.amount)}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <EmptyState text="No top route data found yet." />
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-12">
+        <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm xl:col-span-8">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-lg font-black text-slate-900">
+                Recent Bookings
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Latest transport activity from live database
+              </p>
+            </div>
+
+            <Link
+              href="/transport"
+              className="w-fit rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+            >
+              View All
+            </Link>
+          </div>
+
+          {recentBookings.length ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-xs md:text-sm">
-                <thead className="bg-slate-50 text-[11px] uppercase text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Date</th>
-                    <th className="px-3 py-2 text-left">Package</th>
-                    <th className="px-3 py-2 text-left">Status</th>
-                    <th className="px-3 py-2 text-right">Passengers</th>
+              <table className="min-w-full border-separate border-spacing-y-2 text-sm">
+                <thead>
+                  <tr className="text-left text-xs font-black uppercase tracking-wide text-slate-500">
+                    <th className="px-3 py-2">Customer</th>
+                    <th className="px-3 py-2">Agent</th>
+                    <th className="px-3 py-2">Route</th>
+                    <th className="px-3 py-2">Vehicle</th>
+                    <th className="px-3 py-2">Amount</th>
+                    <th className="px-3 py-2">Status</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {bookings.map((b) => (
-                    <tr
-                      key={b.id}
-                      className="border-t border-slate-100 hover:bg-slate-50/60"
-                    >
-                      <td className="px-3 py-2 text-[11px] text-slate-500">
-                        {formatDateTime(b.created_at)}
+                  {recentBookings.map((booking) => (
+                    <tr key={booking.id} className="bg-slate-50">
+                      <td className="rounded-l-2xl px-3 py-3 font-black text-slate-900">
+                        {booking.customer_name ?? "-"}
                       </td>
-                      <td className="px-3 py-2">
-                        <div className="text-xs font-semibold text-slate-900">
-                          {b.package_code ?? "(No Code)"}
-                        </div>
-                        <div className="text-[11px] text-slate-500">
-                          {(b.package_origin ?? "-") + " • " + (b.package_dates ?? "-")}
-                        </div>
+                      <td className="px-3 py-3 font-medium text-slate-700">
+                        {booking.agent_name ?? "-"}
                       </td>
-                      <td className="px-3 py-2">
-                        <span
-                          className={
-                            "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold " +
-                            (b.status === "pending"
-                              ? "bg-amber-100 text-amber-800 border-amber-200"
-                              : b.status === "confirmed"
-                              ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                              : "bg-red-100 text-red-800 border-red-200")
-                          }
-                        >
-                          {b.status}
-                        </span>
+                      <td className="px-3 py-3 font-medium text-slate-700">
+                        {booking.pickup_city ?? "-"} →{" "}
+                        {booking.dropoff_city ?? "-"}
                       </td>
-                      <td className="px-3 py-2 text-right text-xs text-slate-700">
-                        {b.passengers}
+                      <td className="px-3 py-3 font-medium text-slate-700">
+                        {booking.vehicle_type ?? "-"}
+                      </td>
+                      <td className="px-3 py-3 font-black text-slate-900">
+                        {formatMoney(Number(booking.total_price ?? 0))}
+                      </td>
+                      <td className="rounded-r-2xl px-3 py-3">
+                        <StatusBadge status={booking.status} />
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          ) : (
+            <EmptyState text="No recent bookings found yet." />
           )}
-        </section>
-      </div>
-    </main>
+        </div>
+
+        <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm xl:col-span-4">
+          <h2 className="text-lg font-black text-slate-900">Quick Actions</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Fast admin shortcuts for daily work
+          </p>
+
+          <div className="mt-5 space-y-3">
+            {[
+              { title: "New Transport Booking", href: "/transport/new", icon: Car },
+              { title: "Create Invoice", href: "/accounts/invoices/new", icon: Receipt },
+              { title: "Agent Ledger", href: "/accounts/agent-ledger", icon: Users },
+              { title: "Operations Live Control", href: "/operations/live-control", icon: Bus },
+              {
+                title: "AI Financial Health",
+                href: "/accounts/ai-financial-health",
+                icon: BrainCircuit,
+              },
+              { title: "Profit Leaks", href: "/accounts/profit-leaks", icon: Flame },
+            ].map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group flex items-center gap-4 rounded-2xl border border-slate-200 p-4 transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-sm"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 group-hover:bg-white">
+                    <Icon className="h-5 w-5" />
+                  </div>
+
+                  <span className="font-black text-slate-800">{item.title}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-5">
+          <h2 className="text-lg font-black text-slate-900">Booking Volume</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Monthly booking count trend
+          </p>
+        </div>
+
+        {revenueTrend.length ? (
+          <div className="h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={revenueTrend}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+                <Tooltip
+                  formatter={(value: number) => formatNumber(value)}
+                  contentStyle={{
+                    borderRadius: 16,
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+                  }}
+                />
+                <Bar dataKey="bookings" radius={[12, 12, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <EmptyState text="No booking volume data found yet." />
+        )}
+      </section>
+    </div>
   );
 }

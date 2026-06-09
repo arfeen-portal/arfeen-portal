@@ -1,8 +1,8 @@
 // src/app/transport/book/[id]/page.tsx
 
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 import Link from "next/link";
 export const dynamic = "force-dynamic";

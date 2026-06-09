@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "./supabase";
+import { getSupabaseServerClient } from "./supabase";
 export const dynamic = "force-dynamic";
 
 type CurrencyRateRow = {
@@ -13,7 +13,7 @@ export async function convertAmount(
   try {
     if (from === to) return amount;
 
-    const supabase = createSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
 
     const { data, error } = await (supabase as any)
       .from("currency_rates")

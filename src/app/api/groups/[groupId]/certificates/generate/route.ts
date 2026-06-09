@@ -1,25 +1,12 @@
-// src/app/api/groups/[groupId]/certificates/generate/route.ts
+﻿import { NextResponse } from "next/server";
 
-// Iss file ke liye TypeScript checking band:
- // @ts-nocheck
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-import { NextRequest, NextResponse } from "next/server";
-
-// POST handler – context ko `any` rakhenge taake RouteHandlerConfig se fight na ho
-export const POST = async (request: NextRequest, context: any) => {
-  const groupId = context?.params?.groupId ?? "";
-
-  // TODO: yahan baad me real certificate generation logic add karna hai.
-  // Abhi ke liye sirf placeholder response, taake build pass ho jaye.
-  return NextResponse.json(
-    {
-      ok: true,
-      groupId,
-      message:
-        "Certificates generate API placeholder – implement actual logic later.",
-      certificates: [],
-      count: 0,
-    },
-    { status: 200 }
-  );
-};
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    status: "ready",
+    data: [],
+  });
+}

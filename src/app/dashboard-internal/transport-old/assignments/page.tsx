@@ -3,8 +3,8 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { getSupabaseClient} from '@/lib/supabaseClient';
-const supabase = getSupabaseClient();
+import { supabaseClient} from '@/lib/supabaseClient';
+const supabase = supabaseClient;
 type AssignmentRow = {
   id: string;
   is_primary: boolean | null;

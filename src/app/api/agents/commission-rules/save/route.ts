@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+const supabase = supabaseAdminSafe;
+
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+  
   const body = await req.json();
 
   if (!body.agent_id) {

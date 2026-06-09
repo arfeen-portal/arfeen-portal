@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+  
+  const supabase = supabaseAdminSafe;
   const body = await req.json();
 
   const invoiceNumber = "INV-" + Date.now();

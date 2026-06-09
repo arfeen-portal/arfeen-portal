@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const supabase = await createClient();
+  const supabase = getSupabaseAdmin();
 
   const { data, error } = await supabase
     .from('training_modules')

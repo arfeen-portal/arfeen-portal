@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const supabaseAdmin = getSupabaseAdminSafe();
+    const supabaseAdmin = supabaseAdminSafe;;
     if (!supabaseAdmin) {
       return NextResponse.json(
         { error: "Supabase env not configured" },

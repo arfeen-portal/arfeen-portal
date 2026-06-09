@@ -1,32 +1,32 @@
-// src/app/agent/transport/bookings/route.ts
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-/**
- * GET  /agent/transport/bookings?agentId=...
- * Simple list of bookings per agent
- */
+
 export async function GET(req: Request) {
-  const supabase = await createClient();
+  const supabase = getSupabaseAdmin();
+
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase not initialized" }, { status: 500 });
+  }
+
   const url = new URL(req.url);
   const agentId = url.searchParams.get("agentId");
 
-  let query = supabase.from("transport_bookings").select("*");
+  let query = supabase
+    .from("transport_bookings")
+    .select("*");
 
   if (agentId) {
     query = query.eq("agent_id", agentId);
   }
 
-  const { data, error } = await query.order("created_at", {
-    ascending: false,
-  });
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
-    console.error("GET bookings error:", error);
     return NextResponse.json(
-      { error: "Failed to load bookings" },
+      { error: "Failed to load bookings", details: error.message },
       { status: 500 }
     );
   }
@@ -34,29 +34,28 @@ export async function GET(req: Request) {
   return NextResponse.json({ bookings: data ?? [] });
 }
 
-/**
- * POST /agent/transport/bookings
- * Body: JSON with booking fields
- */
 export async function POST(req: Request) {
-  const supabase = await createClient();
+  const supabase = getSupabaseAdmin();
+
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase not initialized" }, { status: 500 });
+  }
 
   const body = await req.json().catch(() => null);
 
   if (!body) {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  // yahan aap apne fields rakh sakte ho, filhaal generic insert
-  const { error } = await supabase.from("transport_bookings").insert(body);
+  const payload = Array.isArray(body) ? body : [body];
+
+  const { error } = await supabase
+    .from("transport_bookings")
+    .insert(payload);
 
   if (error) {
-    console.error("Create booking error:", error);
     return NextResponse.json(
-      { error: "Failed to create booking" },
+      { error: "Failed to create booking", details: error.message },
       { status: 500 }
     );
   }

@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from '@/lib/supabaseClient';
 
-const supabase = getSupabaseClient();
+const supabase = supabaseClient;
 
 export default function NewHotelPropertyPage() {
   const router = useRouter();

@@ -1,11 +1,13 @@
 // src/app/api/dashboard/overview/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+const supabase = supabaseAdminSafe;
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient();
+    
 
     // Agar tumhein query string chahiye to yahan se lo:
     // const { searchParams } = new URL(req.url);

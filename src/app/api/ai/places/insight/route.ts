@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+
 import { callAI } from '../../../../../utils/ai';
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = getSupabaseAdmin();
   const body = await req.json();
 
   const { placeId, insightType, baseData } = body; 

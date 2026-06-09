@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 const REQUIRED_HOTEL_FIELDS = [
   "hotel_name",
@@ -41,7 +41,7 @@ interface ImportBody {
 
 // 🔹 POST = IMPORT
 export async function POST(req: Request) {
-  const supabase = createClient();
+const supabase = supabaseAdminSafe;
 
   try {
     const body = (await req.json()) as ImportBody;
@@ -292,7 +292,7 @@ export async function POST(req: Request) {
 
 // 🔹 GET = JOB LIST / JOB DETAILS + ERRORS
 export async function GET(req: Request) {
-  const supabase = createClient();
+  const supabase = supabaseAdminSafe;
   const { searchParams } = new URL(req.url);
   const jobId = searchParams.get("job_id");
 

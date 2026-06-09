@@ -1,5 +1,5 @@
 // src/lib/bugLogger.ts
-import { createSupabaseServerClient } from "./supabase";
+import { getSupabaseServerClient } from "./supabase";
 export const dynamic = "force-dynamic";
 
 export type BugPayload = {
@@ -12,7 +12,7 @@ export type BugPayload = {
 
 export async function logBug(payload: BugPayload) {
   try {
-    const supabase = createSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
 
     const row = {
       severity: payload.severity ?? "error",

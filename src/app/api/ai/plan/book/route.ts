@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,8 @@ type BookRequestBody = {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as BookRequestBody;
-    const supabase = getSupabaseServerClient();
+const supabase = supabaseAdminSafe;
+
 
     const {
       data: { user }

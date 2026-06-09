@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export default async function AgentLedgerPage() {
-  const supabase = createClient();
+  const supabase = supabaseClient;
 
   const {
     data: { user },

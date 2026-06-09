@@ -1,35 +1,48 @@
-import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-/**
- * Safe env getter (build-time friendly)
- */
-function getEnv(name: string): string | null {
-  const v = process.env[name];
-  return v && v.length > 0 ? v : null;
+type AppSupabaseClient = SupabaseClient<any, "public", any>;
+
+function getSupabaseEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return null;
+  }
+
+  return { url, anonKey };
 }
 
-/**
- * ✅ Server-only Supabase client
- * ✅ Build-safe (never throws during build)
- */
-export function getSupabaseServerClient() {
-  const url = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+export async function createSupabaseServerClient(): Promise<AppSupabaseClient | null> {
+  try {
+    const env = getSupabaseEnv();
+    if (!env) return null;
 
-  // ❗ build time pe error throw nahi karna
-  if (!url || !serviceKey) return null;
+    const cookieStore = await cookies();
 
-  return createClient(url, serviceKey, {
-    auth: {
-      persistSession: false,
-    },
-  });
+    return createServerClient(env.url, env.anonKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // ignore in read-only server component contexts
+          }
+        },
+      },
+    });
+  } catch {
+    return null;
+  }
 }
 
-/**
- * ✅ Backward compatibility
- * (tumhare purane imports break na hon)
- */
-export function createSupabaseServerClient() {
-  return getSupabaseServerClient();
+export async function getSupabaseServerClient(): Promise<AppSupabaseClient | null> {
+  return createSupabaseServerClient();
 }

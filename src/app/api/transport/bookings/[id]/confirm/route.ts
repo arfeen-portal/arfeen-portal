@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest, context: any) {
   const { params } = context;
   const { id } = params;
-  const supabase = createClient();
+   const supabase = supabaseAdminSafe;
 
   const { error: updateError } = await supabase
     .from("transport_bookings")

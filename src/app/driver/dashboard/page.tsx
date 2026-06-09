@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 type Job = {
   id: string;
@@ -10,7 +10,7 @@ type Job = {
 };
 
 export default async function DriverDashboardPage() {
-  const supabase = createServerSupabaseClient();
+  const supabase = supabaseAdminSafe;
 
   // RLS ke through future me sirf current driver ki jobs aayengi
   const { data: jobs, error } = await supabase

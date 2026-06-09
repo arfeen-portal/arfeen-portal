@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const supabase = getSupabaseServerClient();
+  const supabase = supabaseAdminSafe;
 
   // ❗ Build-time / env missing safety
   if (!supabase) {

@@ -1,10 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+const supabase = supabaseAdminSafe;
+
 
 export async function GET(req: Request) {
-  const supabase = createClient();
+  
 
   const { searchParams } = new URL(req.url);
   const agentId = searchParams.get("agent_id");

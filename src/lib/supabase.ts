@@ -29,7 +29,7 @@ export function createAdminClient(): SupabaseClient | null {
 export const createSupabaseAdminClient = createAdminClient;
 
 // ---------- Server (Anon) ----------
-export function createSupabaseServerClient(): SupabaseClient | null {
+export function getSupabaseServerClient(): SupabaseClient | null {
   const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const anonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
 

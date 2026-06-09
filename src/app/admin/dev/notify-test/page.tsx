@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export default function NotifyTestPage() {
-  const supabase = getSupabaseClient();
+  const supabase = supabaseClient;
 
   const [bookingId, setBookingId] = useState("");
   const [loading, setLoading] = useState(false);

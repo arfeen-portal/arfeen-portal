@@ -2,7 +2,8 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+
 
 
 export async function GET(req: NextRequest) {
@@ -19,7 +20,9 @@ export async function GET(req: NextRequest) {
       ? dateParam
       : today.toISOString().slice(0, 10);
 
-    const supabase = getSupabaseServerClient();
+    const supabase = supabaseAdminSafe;
+
+
 
     const { data, error } = await supabase
       .from('crowd_forecast')

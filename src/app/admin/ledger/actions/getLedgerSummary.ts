@@ -1,10 +1,9 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
-
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export async function getLedgerSummary() {
-  const supabase = await createClient();
+  const supabase = supabaseClient;
 
   const { data, error } = await supabase
     .from("agent_ledger_agent_summary")

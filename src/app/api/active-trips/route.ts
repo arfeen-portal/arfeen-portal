@@ -1,29 +1,33 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET() {
-  // ✅ Build-time safe Supabase client
-  const supabase = createClient();
+  try {
+    const supabase = getSupabaseAdminSafe();
 
-  // ✅ VERY IMPORTANT GUARD
-  if (!supabase) {
-    // Build ke waqt yahan se quietly exit
-    return NextResponse.json([], { status: 200 });
-  }
+    if (!supabase) {
+      return NextResponse.json([], { status: 200 });
+    }
 
-  const { data, error } = await supabase
-    .from("v_active_trips")
-    .select("*");
+    const { data, error } = await supabase
+      .from("v_active_trips")
+      .select("*");
 
-  if (error) {
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data ?? []);
+  } catch (error: any) {
     return NextResponse.json(
-      { error: error.message },
+      { error: error?.message || "Unexpected active trips error." },
       { status: 500 }
     );
   }
-
-  return NextResponse.json(data);
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+
 export const dynamic = "force-dynamic";
 
 function getStripe() {
@@ -11,7 +12,8 @@ function getStripe() {
 
 export async function POST(req: Request) {
   const stripe = getStripe();
-  const supabase = getSupabaseServerClient();
+  const supabase = supabaseAdminSafe;
+
 
   if (!stripe || !supabase) {
     return NextResponse.json(

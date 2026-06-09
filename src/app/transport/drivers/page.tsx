@@ -1,11 +1,10 @@
 // src/app/transport/drivers/page.tsx
 
-import { getSupabaseClient } from '@/lib/supabaseClient';
-
-const supabase = getSupabaseClient();
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
 type Driver = {
   id: string;
   full_name: string;
@@ -17,79 +16,138 @@ type Driver = {
 };
 
 export default async function DriversPage() {
-  const { data: drivers, error } = await supabase
-    .from("transport_drivers")
-    .select("*")
-    .order("full_name", { ascending: true });
+  const supabase = getSupabaseAdminSafe();
+
+  let drivers: Driver[] = [];
+  let errorMessage = "";
+
+  if (!supabase) {
+    errorMessage = "Supabase admin client is not configured.";
+  } else {
+    const { data, error } = await supabase
+      .from("transport_drivers")
+      .select("*")
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      errorMessage = error.message;
+    } else {
+      drivers = (data || []) as Driver[];
+    }
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Drivers</h1>
+    <div className="min-h-screen bg-slate-950 px-6 py-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="rounded-3xl border border-slate-800 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-600">
+                Transport Module
+              </p>
+              <h1 className="mt-2 text-3xl font-black text-slate-950">
+                Drivers
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Manage driver records, WhatsApp contacts, license details and active status.
+              </p>
+            </div>
 
-        <a
-          href="/transport/drivers/new"
-          className="rounded bg-black px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-900"
-        >
-          + New Driver
-        </a>
+            <a
+              href="/transport/drivers/new"
+              className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+            >
+              Add New Driver
+            </a>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <StatCard title="Total Drivers" value={String(drivers.length)} />
+          <StatCard
+            title="Active Drivers"
+            value={String(drivers.filter((d) => d.is_active).length)}
+          />
+          <StatCard
+            title="Inactive Drivers"
+            value={String(drivers.filter((d) => !d.is_active).length)}
+          />
+        </section>
+
+        {errorMessage ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            Error loading drivers: {errorMessage}
+          </div>
+        ) : null}
+
+        <section className="overflow-hidden rounded-3xl border border-slate-800 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-4">
+            <h2 className="text-lg font-bold text-slate-950">Driver List</h2>
+            <p className="text-sm text-slate-500">
+              Active drivers can be assigned to transport bookings.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-4 text-left font-semibold text-slate-600">Name</th>
+                  <th className="px-6 py-4 text-left font-semibold text-slate-600">Phone</th>
+                  <th className="px-6 py-4 text-left font-semibold text-slate-600">WhatsApp</th>
+                  <th className="px-6 py-4 text-left font-semibold text-slate-600">License</th>
+                  <th className="px-6 py-4 text-center font-semibold text-slate-600">Active</th>
+                  <th className="px-6 py-4 text-left font-semibold text-slate-600">Notes</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100">
+                {drivers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500">
+                      No drivers found yet.
+                    </td>
+                  </tr>
+                ) : (
+                  drivers.map((d) => (
+                    <tr key={d.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 font-semibold text-slate-950">
+                        {d.full_name}
+                      </td>
+                      <td className="px-6 py-4 text-slate-700">{d.phone || "—"}</td>
+                      <td className="px-6 py-4 text-slate-700">{d.whatsapp || "—"}</td>
+                      <td className="px-6 py-4 text-slate-700">{d.license_number || "—"}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                            d.is_active
+                              ? "bg-green-50 text-green-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {d.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-slate-500">
+                        {d.notes || "—"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
+    </div>
+  );
+}
 
-      {error && (
-        <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
-          Error loading drivers: {error.message}
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-lg border bg-white">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b bg-gray-50 text-xs font-semibold uppercase text-gray-600">
-            <tr>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Phone</th>
-              <th className="px-3 py-2">WhatsApp</th>
-              <th className="px-3 py-2">License</th>
-              <th className="px-3 py-2">Active</th>
-              <th className="px-3 py-2">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {drivers?.map((d: Driver) => (
-              <tr key={d.id} className="border-b last:border-b-0 align-top">
-                <td className="px-3 py-2">{d.full_name}</td>
-                <td className="px-3 py-2">{d.phone || "-"}</td>
-                <td className="px-3 py-2">{d.whatsapp || "-"}</td>
-                <td className="px-3 py-2">{d.license_number || "-"}</td>
-                <td className="px-3 py-2 text-xs">
-                  {d.is_active ? (
-                    <span className="inline-flex rounded-full border border-green-500 bg-green-50 px-2 py-0.5 text-[11px] text-green-700">
-                      active
-                    </span>
-                  ) : (
-                    <span className="inline-flex rounded-full border border-gray-400 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-600">
-                      inactive
-                    </span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-xs text-gray-600">
-                  {d.notes || "—"}
-                </td>
-              </tr>
-            ))}
-
-            {!drivers?.length && !error && (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="px-3 py-4 text-center text-xs text-gray-500"
-                >
-                  No drivers found yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+function StatCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-3xl border border-slate-800 bg-white p-5 shadow-sm">
+      <p className="text-xs font-medium text-slate-500">{title}</p>
+      <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type Account = {
   id: string;
@@ -18,7 +18,7 @@ type Line = {
 };
 
 export default function NewJournalEntryPage() {
-  const supabase = useMemo(() => getSupabaseClient(), []);
+  const supabase = useMemo(() => supabaseClient, []);
   const router = useRouter();
 
   const [entryDate, setEntryDate] = useState<string>(

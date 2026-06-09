@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseClient } from "@/lib/supabaseClient";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+const supabase = supabaseClient;
+
+
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+
 
 type BookingStatus = "pending" | "confirmed" | "cancelled";
 

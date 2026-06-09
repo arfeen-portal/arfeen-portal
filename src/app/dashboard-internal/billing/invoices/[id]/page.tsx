@@ -2,14 +2,16 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseClient } from "@/lib/supabaseClient";
+
 import type { Database } from '@/lib/database.types';
 import Link from 'next/link';
 
 // ----- Supabase client (browser) -----
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+const supabase = supabaseClient;
+
 
 type Invoice = Database['public']['Tables']['invoices']['Row'];
 type InvoiceItem = Database['public']['Tables']['invoice_items']['Row'];

@@ -1,26 +1,19 @@
-// app/dashboard/groups/[groupId]/passport-vault/page.tsx
+import { supabaseClient } from "@/lib/supabaseClient";
 
-import { createClient } from "@supabase/supabase-js";
 
 type PageProps = {
   params: { groupId: string };
 };
 
 export default async function PassportVaultPage({ params }: PageProps) {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // ✅ SAFE server client (no env access here)
+  const supabase = supabaseClient;
 
-  // ✅ BUILD-TIME SAFETY (MOST IMPORTANT)
-  if (!supabaseUrl || !serviceRoleKey) {
-    return null; // build ke waqt quietly skip
-  }
-
-  // ✅ Supabase client INSIDE function (never top-level)
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   const { data } = await supabase
     .from("passport_vault")
-    .select(`
+    .select(
+      `
       id,
       passport_number,
       passport_image_url,
@@ -29,7 +22,8 @@ export default async function PassportVaultPage({ params }: PageProps) {
       pilgrim_profiles (
         full_name
       )
-    `)
+    `
+    )
     .eq("pilgrim_profiles.group_trip_id", params.groupId);
 
   return (
@@ -50,19 +44,18 @@ export default async function PassportVaultPage({ params }: PageProps) {
               <th className="px-3 py-2 text-left">Visa Scan</th>
             </tr>
           </thead>
-
           <tbody>
             {data && data.length > 0 ? (
               data.map((row: any) => (
                 <tr key={row.id} className="border-t">
                   <td className="px-3 py-2">
-                    {row.pilgrim_profiles?.full_name ?? "-"}
+                    {row.pilgrim_profiles?.full_name || "-"}
                   </td>
                   <td className="px-3 py-2">
-                    {row.passport_number ?? "-"}
+                    {row.passport_number || "-"}
                   </td>
                   <td className="px-3 py-2">
-                    {row.expiry_date ?? "-"}
+                    {row.expiry_date || "-"}
                   </td>
                   <td className="px-3 py-2">
                     {row.passport_image_url ? (
@@ -94,7 +87,10 @@ export default async function PassportVaultPage({ params }: PageProps) {
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+                <td
+                  colSpan={5}
+                  className="px-3 py-6 text-center text-gray-500"
+                >
                   No records yet.
                 </td>
               </tr>

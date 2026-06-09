@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest, context: any) {
   const { params } = context;
   const { slug } = params;
-  // 🔴 pehle: const supabase = createClient();
-  const supabase = await createClient(); // ✅
+  // 🔴 pehle:  const supabase = supabaseAdminSafe;
+  const supabase = supabaseAdminSafe;
 
   // 1) Place find karo
   const { data: place, error: placeErr } = await supabase

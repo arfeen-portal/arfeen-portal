@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+
 export const dynamic = "force-dynamic";
 
 type Body = {
@@ -10,7 +11,8 @@ type Body = {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Body;
-    const supabase = getSupabaseServerClient();
+    const supabase = supabaseAdminSafe;
+
 
     const { data: rule } = await supabase
       .from('agent_pricing_rules')

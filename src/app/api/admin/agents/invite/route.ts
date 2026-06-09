@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const supabaseAdmin = getSupabaseServerClient();
-
-  // ✅ build-time safety
-  if (!supabaseAdmin) {
-    return NextResponse.json(
-      { ok: false, error: "Supabase server client not configured" },
-      { status: 500 }
-    );
-  }
-
   try {
+    const supabaseAdmin = getSupabaseAdminSafe();
+
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { ok: false, error: "Supabase admin client not configured" },
+        { status: 500 }
+      );
+    }
+
     const body = await req.json();
-    const { name, email, phone } = body;
+    const name = String(body.name || "").trim();
+    const email = String(body.email || "").trim();
+    const phone = String(body.phone || "").trim();
 
     if (!name || !email) {
       return NextResponse.json(
@@ -25,7 +26,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1️⃣ Auth user create (admin)
     const { data: authUser, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email,
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error: authError?.message ?? "Failed to create auth user",
+          error: authError?.message || "Failed to create auth user",
         },
         { status: 400 }
       );
@@ -44,18 +44,15 @@ export async function POST(req: Request) {
 
     const userId = authUser.user.id;
 
-    // 2️⃣ public.users insert (role is REQUIRED)
-    const { error: userError } = await supabaseAdmin
-      .from("users")
-      .insert([
-        {
-          id: userId,
-          name,
-          email,
-          phone,
-          role: "agent",
-        },
-      ]);
+    const { error: userError } = await supabaseAdmin.from("users").insert([
+      {
+        id: userId,
+        name,
+        email,
+        phone,
+        role: "agent",
+      },
+    ]);
 
     if (userError) {
       return NextResponse.json(
@@ -64,7 +61,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3️⃣ public.agents insert (tumhara original structure)
     const { data: agent, error: agentError } = await supabaseAdmin
       .from("agents")
       .insert([
@@ -73,7 +69,7 @@ export async function POST(req: Request) {
           name,
           email,
           phone,
-          billing_currency: "PKR", // default
+          billing_currency: "PKR",
           currency: "PKR",
           is_credit_blocked: false,
           is_active: true,
@@ -101,6 +97,7 @@ export async function POST(req: Request) {
     );
   } catch (err) {
     console.error("Agent invite error:", err);
+
     return NextResponse.json(
       { ok: false, error: "Unexpected server error" },
       { status: 500 }

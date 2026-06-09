@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 type PlannerInput = {
@@ -84,7 +85,8 @@ export async function POST(req: NextRequest) {
       ]
     };
 
-    const supabase = getSupabaseServerClient();
+    const supabase = supabaseAdminSafe;
+
 
     const {
       data: { user }

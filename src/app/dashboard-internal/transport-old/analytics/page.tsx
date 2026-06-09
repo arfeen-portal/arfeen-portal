@@ -1,10 +1,10 @@
 export const dynamic = "force-dynamic";
 
 import PageHeader from "@/components/layout/PageHeader";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 export default async function TransportAnalyticsPage() {
-  const supabase = getSupabaseClient();
+  const supabase = supabaseClient;
 
   // Top routes
   const { data: topRoutes } = await supabase

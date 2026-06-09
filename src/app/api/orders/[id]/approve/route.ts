@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest, context: any) {
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest, context: any) {
   const { id } = params;
 
   // 🔹 Initialize Supabase
-  const supabase = createClient();
+ const supabase = supabaseAdminSafe;
 
   // 🔹 Read incoming request body
   const body = await req.json();

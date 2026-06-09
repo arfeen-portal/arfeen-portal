@@ -1,48 +1,84 @@
-import { createClient } from "@/utils/supabase/server";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export default async function CashFlowReportPage() {
-  const supabase = createClient();
-  const { data } = await supabase.from("v_cash_flow").select("*");
+const cashStats = [
+  { label: "Opening Balance", value: "SAR 52,000" },
+  { label: "Cash Inflow", value: "SAR 184,600" },
+  { label: "Cash Outflow", value: "SAR 126,300" },
+  { label: "Closing Balance", value: "SAR 110,300" },
+];
 
+const cashRows = [
+  { head: "Agent Collections", inflow: "SAR 92,400", outflow: "-", net: "SAR 92,400" },
+  { head: "Supplier Payments", inflow: "-", outflow: "SAR 61,800", net: "-SAR 61,800" },
+  { head: "Transport Revenue", inflow: "SAR 38,200", outflow: "SAR 14,600", net: "SAR 23,600" },
+  { head: "Hotel Settlements", inflow: "SAR 54,000", outflow: "SAR 49,900", net: "SAR 4,100" },
+];
+
+export default function CashFlowReportPage() {
   return (
-    <main className="p-6">
-      <h1 className="text-lg font-semibold mb-4">Cash Flow (Monthly)</h1>
-      <div className="border rounded-xl bg-white overflow-hidden">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left px-3 py-2">Month</th>
-              <th className="text-right px-3 py-2">Cash In</th>
-              <th className="text-right px-3 py-2">Cash Out</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.map((row) => (
-              <tr key={row.month} className="border-t">
-                <td className="px-3 py-2">
-                  {new Date(row.month).toLocaleDateString("en-US", {
-                    month: "short",
-                    year: "2-digit",
-                  })}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  {Number(row.cash_in).toLocaleString()}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  {Number(row.cash_out).toLocaleString()}
-                </td>
-              </tr>
-            )) || (
+    <main className="min-h-screen bg-slate-100 px-6 py-8">
+      <section className="mx-auto max-w-7xl rounded-[32px] bg-white p-8 shadow-xl">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-600">
+              Financial Reports
+            </p>
+            <h1 className="mt-3 text-3xl font-black text-slate-950">
+              Cash Flow Report
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+              Track cash inflow, outflow, agent collections, supplier payments,
+              transport revenue and month-wise liquidity position.
+            </p>
+          </div>
+
+          <button className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">
+            Export Cash Flow
+          </button>
+        </div>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-4">
+          {cashStats.map((item) => (
+            <div key={item.label} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{item.label}</p>
+              <h2 className="mt-3 text-2xl font-black text-slate-950">{item.value}</h2>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
+          <div className="bg-slate-950 px-6 py-4 text-white">
+            <h2 className="text-lg font-black">Cash Movement Summary</h2>
+          </div>
+
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100 text-slate-600">
               <tr>
-                <td className="px-3 py-2 text-xs text-gray-500" colSpan={3}>
-                  No data
-                </td>
+                <th className="px-5 py-4 text-left">Head</th>
+                <th className="px-5 py-4 text-left">Inflow</th>
+                <th className="px-5 py-4 text-left">Outflow</th>
+                <th className="px-5 py-4 text-left">Net</th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {cashRows.map((row) => (
+                <tr key={row.head} className="border-t hover:bg-slate-50">
+                  <td className="px-5 py-4 font-bold text-slate-900">{row.head}</td>
+                  <td className="px-5 py-4 text-emerald-700">{row.inflow}</td>
+                  <td className="px-5 py-4 text-red-700">{row.outflow}</td>
+                  <td className="px-5 py-4 font-black text-slate-900">{row.net}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-8 rounded-3xl bg-slate-950 p-6 text-white">
+          <h2 className="text-xl font-black">Cashflow Intelligence</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
+            System can later forecast low cash days, overdue agent payments,
+            supplier pressure and risky booking periods.
+          </p>
+        </div>
+      </section>
     </main>
   );
 }

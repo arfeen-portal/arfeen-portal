@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getSupabaseClient } from '@/lib/supabaseClient';
-const supabase = getSupabaseClient();
+import { useEffect, useMemo, useState } from "react";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type Line = {
   debit: number | null;
@@ -15,14 +14,35 @@ type JournalRow = {
   description: string | null;
   reference: string | null;
   source_module: string | null;
-  acc_journal_entry_lines: Line[];
+  acc_journal_entry_lines: Line[] | null;
 };
 
 const PAGE_SIZE = 20;
 
-export default function JournalPage() {
- ; // ✅ SAFE (may be null at build time)
+function toAmount(value: number | string | null | undefined): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
 
+function money(value: number | string | null | undefined): string {
+  return toAmount(value).toLocaleString("en-PK", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function totalsFromLines(lines: Line[] | null | undefined): { debit: number; credit: number } {
+  return (lines ?? []).reduce<{ debit: number; credit: number }>(
+    (acc, line) => {
+      acc.debit += toAmount(line.debit);
+      acc.credit += toAmount(line.credit);
+      return acc;
+    },
+    { debit: 0, credit: 0 }
+  );
+}
+
+export default function JournalPage() {
   const [rows, setRows] = useState<JournalRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -36,14 +56,13 @@ export default function JournalPage() {
   const from = page * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  useEffect(() => {
-    // 🔒 IMPORTANT: build / prerender safety
-    if (!supabase) return;
+  async function fetchData() {
+    if (!supabaseClient) return;
 
-    const fetchData = async () => {
-      setLoading(true);
+    setLoading(true);
 
-      let query = supabase
+    try {
+      let query = supabaseClient
         .from("acc_journal_entries")
         .select(
           `
@@ -52,7 +71,10 @@ export default function JournalPage() {
           description,
           reference,
           source_module,
-          acc_journal_entry_lines(debit, credit)
+          acc_journal_entry_lines (
+            debit,
+            credit
+          )
         `,
           { count: "exact" }
         )
@@ -63,9 +85,7 @@ export default function JournalPage() {
       if (dateFrom) query = query.gte("entry_date", dateFrom);
       if (dateTo) query = query.lte("entry_date", dateTo);
       if (source) query = query.eq("source_module", source);
-      if (search.trim()) {
-        query = query.ilike("description", `%${search.trim()}%`);
-      }
+      if (search.trim()) query = query.ilike("description", `%${search.trim()}%`);
 
       const { data, error, count } = await query;
 
@@ -73,36 +93,44 @@ export default function JournalPage() {
         console.error("Journal error:", error);
         setRows([]);
         setTotal(0);
-      } else {
-        setRows((data || []) as JournalRow[]);
-        setTotal(count || 0);
+        return;
       }
 
+      setRows((data ?? []) as JournalRow[]);
+      setTotal(count ?? 0);
+    } finally {
       setLoading(false);
-    };
+    }
+  }
 
+  useEffect(() => {
     fetchData();
-  }, [supabase, page, dateFrom, dateTo, source, search]);
+  }, [page, dateFrom, dateTo, source, search]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const handleExport = () => {
+  const summary = useMemo(() => {
+    return rows.reduce(
+      (acc, row) => {
+        const rowTotals = totalsFromLines(row.acc_journal_entry_lines);
+        acc.debit += rowTotals.debit;
+        acc.credit += rowTotals.credit;
+        return acc;
+      },
+      { debit: 0, credit: 0 }
+    );
+  }, [rows]);
+
+  function handleExport() {
     const header = ["Date", "Reference", "Description", "Debit", "Credit"].join(",");
 
-    const lines = rows.map((r) => {
-      const totals = r.acc_journal_entry_lines.reduce(
-        (acc, l) => {
-          acc.debit += Number(l.debit || 0);
-          acc.credit += Number(l.credit || 0);
-          return acc;
-        },
-        { debit: 0, credit: 0 }
-      );
+    const lines = rows.map((row) => {
+      const totals = totalsFromLines(row.acc_journal_entry_lines);
 
       return [
-        r.entry_date || "",
-        r.reference || "",
-        r.description || "",
+        row.entry_date ?? "",
+        row.reference ?? "",
+        `"${String(row.description ?? "").replace(/"/g, '""')}"`,
         totals.debit.toFixed(2),
         totals.credit.toFixed(2),
       ].join(",");
@@ -112,166 +140,198 @@ export default function JournalPage() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "journal-entries.csv";
-    a.click();
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "journal-entries.csv";
+    anchor.click();
 
     URL.revokeObjectURL(url);
-  };
+  }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Journal Entries</h1>
-          <p className="text-xs text-gray-500">
-            Live data from <code>acc_journal_entries</code> +{" "}
-            <code>acc_journal_entry_lines</code>
-          </p>
-        </div>
+    <main className="min-h-screen bg-slate-950 p-6 text-white">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.35em] text-amber-400">
+                Arfeen Travel · Accounts
+              </p>
+              <h1 className="mt-3 text-3xl font-black">Journal Entries</h1>
+              <p className="mt-2 text-sm text-slate-400">
+                Live data from <code>acc_journal_entries</code> with debit/credit line totals.
+              </p>
+            </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={handleExport}
-            className="px-3 py-2 text-xs rounded border"
-          >
-            Export CSV
-          </button>
-          <button className="px-4 py-2 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-700">
-            + New Journal Entry
-          </button>
-        </div>
-      </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={handleExport}
+                className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"
+              >
+                Export CSV
+              </button>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <input
-          type="date"
-          className="border rounded px-3 py-2 text-sm"
-          value={dateFrom}
-          onChange={(e) => {
-            setPage(0);
-            setDateFrom(e.target.value);
-          }}
-        />
+              <a
+                href="/accounts/journal/new"
+                className="rounded-2xl bg-amber-400 px-4 py-2 text-sm font-black text-slate-950 hover:bg-amber-300"
+              >
+                + New Journal Entry
+              </a>
+            </div>
+          </div>
 
-        <input
-          type="date"
-          className="border rounded px-3 py-2 text-sm"
-          value={dateTo}
-          onChange={(e) => {
-            setPage(0);
-            setDateTo(e.target.value);
-          }}
-        />
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-slate-900 p-4">
+              <p className="text-xs uppercase text-slate-500">Page Debit</p>
+              <p className="mt-2 text-2xl font-black text-emerald-300">
+                PKR {money(summary.debit)}
+              </p>
+            </div>
 
-        <select
-          className="border rounded px-3 py-2 text-sm"
-          value={source}
-          onChange={(e) => {
-            setPage(0);
-            setSource(e.target.value);
-          }}
-        >
-          <option value="">All Sources</option>
-          <option value="transport">Transport</option>
-          <option value="umrah">Umrah Packages</option>
-          <option value="flight">Flights</option>
-          <option value="manual">Manual</option>
-        </select>
+            <div className="rounded-2xl border border-white/10 bg-slate-900 p-4">
+              <p className="text-xs uppercase text-slate-500">Page Credit</p>
+              <p className="mt-2 text-2xl font-black text-amber-300">
+                PKR {money(summary.credit)}
+              </p>
+            </div>
 
-        <input
-          className="border rounded px-3 py-2 text-sm min-w-[180px]"
-          placeholder="Search description..."
-          value={search}
-          onChange={(e) => {
-            setPage(0);
-            setSearch(e.target.value);
-          }}
-        />
-      </div>
+            <div className="rounded-2xl border border-white/10 bg-slate-900 p-4">
+              <p className="text-xs uppercase text-slate-500">Total Records</p>
+              <p className="mt-2 text-2xl font-black">{total}</p>
+            </div>
+          </div>
+        </section>
 
-      {/* Table */}
-      <div className="overflow-auto border rounded-lg">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-left font-semibold">Date</th>
-              <th className="px-3 py-2 text-left font-semibold">Reference</th>
-              <th className="px-3 py-2 text-left font-semibold">Description</th>
-              <th className="px-3 py-2 text-right font-semibold">Debit</th>
-              <th className="px-3 py-2 text-right font-semibold">Credit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const totals = r.acc_journal_entry_lines.reduce(
-                (acc, l) => {
-                  acc.debit += Number(l.debit || 0);
-                  acc.credit += Number(l.credit || 0);
-                  return acc;
-                },
-                { debit: 0, credit: 0 }
-              );
+        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+          <div className="grid gap-3 md:grid-cols-5">
+            <input
+              type="date"
+              className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm outline-none"
+              value={dateFrom}
+              onChange={(event) => {
+                setPage(0);
+                setDateFrom(event.target.value);
+              }}
+            />
 
-              return (
-                <tr key={r.id} className="border-t">
-                  <td className="px-3 py-2">
-                    {r.entry_date
-                      ? new Date(r.entry_date).toISOString().slice(0, 10)
-                      : ""}
-                  </td>
-                  <td className="px-3 py-2">{r.reference}</td>
-                  <td className="px-3 py-2">{r.description}</td>
-                  <td className="px-3 py-2 text-right">
-                    {totals.debit.toFixed(2)}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {totals.credit.toFixed(2)}
-                  </td>
+            <input
+              type="date"
+              className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm outline-none"
+              value={dateTo}
+              onChange={(event) => {
+                setPage(0);
+                setDateTo(event.target.value);
+              }}
+            />
+
+            <select
+              className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm outline-none"
+              value={source}
+              onChange={(event) => {
+                setPage(0);
+                setSource(event.target.value);
+              }}
+            >
+              <option value="">All Sources</option>
+              <option value="transport">Transport</option>
+              <option value="umrah">Umrah Packages</option>
+              <option value="flight">Flights</option>
+              <option value="manual">Manual</option>
+            </select>
+
+            <input
+              className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm outline-none md:col-span-2"
+              placeholder="Search description..."
+              value={search}
+              onChange={(event) => {
+                setPage(0);
+                setSearch(event.target.value);
+              }}
+            />
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/[0.06] text-xs uppercase text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-left">Reference</th>
+                  <th className="px-4 py-3 text-left">Description</th>
+                  <th className="px-4 py-3 text-right">Debit</th>
+                  <th className="px-4 py-3 text-right">Credit</th>
                 </tr>
-              );
-            })}
+              </thead>
 
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-3 py-6 text-center text-gray-400"
-                >
-                  No journal entries found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              <tbody>
+                {rows.map((row) => {
+                  const totals = totalsFromLines(row.acc_journal_entry_lines);
+
+                  return (
+                    <tr key={row.id} className="border-t border-white/10 hover:bg-white/[0.03]">
+                      <td className="px-4 py-3 text-slate-300">
+                        {row.entry_date ? new Date(row.entry_date).toISOString().slice(0, 10) : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">{row.reference ?? "-"}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-semibold">{row.description ?? "-"}</div>
+                        <div className="text-xs text-slate-500">{row.source_module ?? "manual"}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-emerald-300">
+                        {money(totals.debit)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-amber-300">
+                        {money(totals.credit)}
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {!loading && rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
+                      No journal entries found.
+                    </td>
+                  </tr>
+                )}
+
+                {loading && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
+                      Loading journal entries...
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="flex items-center justify-between gap-4 text-xs text-slate-400">
+          <span>
+            Page {page + 1} of {pageCount} · {total} records
+          </span>
+
+          <div className="flex gap-2">
+            <button
+              disabled={page === 0}
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              className="rounded-xl border border-white/10 px-3 py-2 disabled:opacity-40"
+            >
+              Prev
+            </button>
+
+            <button
+              disabled={page + 1 >= pageCount}
+              onClick={() => setPage((current) => current + 1)}
+              className="rounded-xl border border-white/10 px-3 py-2 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </section>
       </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between text-xs text-gray-600">
-        <span>
-          Page {page + 1} of {pageCount} ({total} records)
-        </span>
-
-        <div className="flex gap-2">
-          <button
-            disabled={page === 0}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            className="px-2 py-1 border rounded disabled:opacity-40"
-          >
-            Prev
-          </button>
-          <button
-            disabled={from + PAGE_SIZE >= total}
-            onClick={() => setPage((p) => p + 1)}
-            className="px-2 py-1 border rounded disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    </div>
+    </main>
   );
 }

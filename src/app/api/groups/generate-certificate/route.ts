@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts } from "pdf-lib";
-import { createClient } from "@/utils/supabase/server";
+import { supabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function POST(req: Request) {
-  const supabase = createClient();
+  const supabase = supabaseAdminSafe;
   const { member_id, group_id, name, completed_spots } = await req.json();
 
   const pdf = await PDFDocument.create();

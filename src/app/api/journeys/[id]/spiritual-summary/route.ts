@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, context: any) {
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, context: any) {
   const journeyId = params.id;
 
   // 🔹 Supabase client (ONLY ONCE)
-  const supabase = await createClient();
+  const supabase = getSupabaseAdmin();
 
   // 🔹 RPC call
   const { data, error } = await supabase.rpc(

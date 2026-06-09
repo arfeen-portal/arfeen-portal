@@ -1,248 +1,594 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
-interface HotelOption {
+type HotelInventory = {
   id: string;
-  label: string;
-}
+  hotel_name: string;
+  supplier_name: string;
+  city: string;
+  category: string | null;
+  sharing_rate: number | null;
+  quad_rate: number | null;
+  triple_rate: number | null;
+  double_rate: number | null;
+  currency: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  meal_plan: string | null;
+  distance_from_haram: string | null;
+};
+
+type VisaInventory = {
+  id: string;
+  supplier_name: string;
+  visa_type: string;
+  nationality: string | null;
+  cost_rate: number | null;
+  currency: string | null;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+type FormState = {
+  package_name: string;
+  package_code: string;
+  package_type: string;
+  status: string;
+
+  departure_date: string;
+  arrival_date: string;
+  total_days: string;
+  makkah_nights: string;
+  madinah_nights: string;
+  total_seats: string;
+
+  airline_name: string;
+  flight_number: string;
+
+  makkah_hotel_inventory_id: string;
+  madinah_hotel_inventory_id: string;
+  visa_inventory_id: string;
+  transport_plan_id: string;
+
+  sharing_price: string;
+  quad_price: string;
+  triple_price: string;
+  double_price: string;
+
+  notes: string;
+};
+
+const airlineOptions = [
+  "Saudi Airlines",
+  "PIA",
+  "AirSial",
+  "Serene Air",
+  "Airblue",
+  "Flynas",
+  "Emirates",
+  "Qatar Airways",
+  "Etihad Airways",
+  "Turkish Airlines",
+  "Other",
+];
 
 export default function NewUmrahPackagePage() {
   const router = useRouter();
-  const supabase = createClient();
 
-  const [hotelsMakkah, setHotelsMakkah] = useState<HotelOption[]>([]);
-  const [hotelsMadinah, setHotelsMadinah] = useState<HotelOption[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [hotels, setHotels] = useState<HotelInventory[]>([]);
+  const [visas, setVisas] = useState<VisaInventory[]>([]);
+  const [loadingInventory, setLoadingInventory] = useState(true);
 
-  const [form, setForm] = useState({
-    code: '',
-    name: '',
-    origin_city: '',
-    nights_makkah: 0,
-    nights_madinah: 0,
-    hotel_makkah_id: '',
-    hotel_madinah_id: '',
-    base_hotel_cost: 0,
-    ticket_cost: 0,
-    visa_cost: 0,
-    profit_amount: 0,
+  const [form, setForm] = useState<FormState>({
+    package_name: "",
+    package_code: "",
+    package_type: "group",
+    status: "draft",
+
+    departure_date: "",
+    arrival_date: "",
+    total_days: "0",
+    makkah_nights: "0",
+    madinah_nights: "0",
+    total_seats: "0",
+
+    airline_name: "",
+    flight_number: "",
+
+    makkah_hotel_inventory_id: "",
+    madinah_hotel_inventory_id: "",
+    visa_inventory_id: "",
+    transport_plan_id: "",
+
+    sharing_price: "0",
+    quad_price: "0",
+    triple_price: "0",
+    double_price: "0",
+
+    notes: "",
   });
 
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const update = (key: keyof FormState, value: string) => {
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+
+      if (key === "departure_date" || key === "arrival_date") {
+        const totalDays = calculateDays(
+          key === "departure_date" ? value : next.departure_date,
+          key === "arrival_date" ? value : next.arrival_date
+        );
+
+        next.total_days = String(totalDays);
+      }
+
+      if (key === "departure_date" && next.arrival_date && next.arrival_date < value) {
+        next.arrival_date = value;
+        next.total_days = "1";
+      }
+
+      return next;
+    });
+  };
+
+  const loadInventory = async () => {
+    try {
+      setLoadingInventory(true);
+
+      const [hotelRes, visaRes] = await Promise.all([
+        fetch("/api/umrah/hotels", { cache: "no-store" }),
+        fetch("/api/umrah/visa", { cache: "no-store" }),
+      ]);
+
+      const hotelJson = await hotelRes.json();
+      const visaJson = await visaRes.json();
+
+      if (hotelRes.ok) setHotels(hotelJson.data || []);
+      if (visaRes.ok) setVisas(visaJson.data || []);
+    } finally {
+      setLoadingInventory(false);
+    }
+  };
 
   useEffect(() => {
-    const loadHotels = async () => {
-      const { data, error } = await supabase
-        .from('hotel_options_v')
-        .select('*');
+    loadInventory();
+  }, []);
 
-      if (error) {
-        console.error(error);
+  const makkahHotels = useMemo(() => {
+    return hotels.filter((x) => x.city === "Makkah");
+  }, [hotels]);
+
+  const madinahHotels = useMemo(() => {
+    return hotels.filter((x) => x.city === "Madinah");
+  }, [hotels]);
+
+  const selectedMakkahHotel = hotels.find(
+    (x) => x.id === form.makkah_hotel_inventory_id
+  );
+
+  const selectedMadinahHotel = hotels.find(
+    (x) => x.id === form.madinah_hotel_inventory_id
+  );
+
+  const selectedVisa = visas.find((x) => x.id === form.visa_inventory_id);
+
+  const hotelCostPreview = useMemo(() => {
+    const makkahNights = Number(form.makkah_nights || 0);
+    const madinahNights = Number(form.madinah_nights || 0);
+
+    return {
+      sharing:
+        Number(selectedMakkahHotel?.sharing_rate || 0) * makkahNights +
+        Number(selectedMadinahHotel?.sharing_rate || 0) * madinahNights,
+
+      quad:
+        Number(selectedMakkahHotel?.quad_rate || 0) * makkahNights +
+        Number(selectedMadinahHotel?.quad_rate || 0) * madinahNights,
+
+      triple:
+        Number(selectedMakkahHotel?.triple_rate || 0) * makkahNights +
+        Number(selectedMadinahHotel?.triple_rate || 0) * madinahNights,
+
+      double:
+        Number(selectedMakkahHotel?.double_rate || 0) * makkahNights +
+        Number(selectedMadinahHotel?.double_rate || 0) * madinahNights,
+    };
+  }, [form.makkah_nights, form.madinah_nights, selectedMakkahHotel, selectedMadinahHotel]);
+
+  const visaCost = Number(selectedVisa?.cost_rate || 0);
+
+  const save = async () => {
+    try {
+      setSaving(true);
+
+      const res = await fetch("/api/umrah/packages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        alert(json.error || "Package save failed");
         return;
       }
 
-      const makkah = [];
-      const madinah = [];
-
-      data.forEach((h: any) => {
-        const option = { id: h.id, label: `${h.name} (${h.city})` };
-        if ((h.city || '').toLowerCase().includes('makkah')) {
-          makkah.push(option);
-        } else if ((h.city || '').toLowerCase().includes('madinah')) {
-          madinah.push(option);
-        }
-      });
-
-      setHotelsMakkah(makkah);
-      setHotelsMadinah(madinah);
-    };
-
-    loadHotels();
-  }, [supabase]);
-
-  const updateField = (field: string, value: any) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMsg(null);
-
-    const { error } = await supabase.from('umrah_packages').insert({
-      code: form.code.trim(),
-      name: form.name.trim(),
-      origin_city: form.origin_city.trim(),
-      nights_makkah: Number(form.nights_makkah) || 0,
-      nights_madinah: Number(form.nights_madinah) || 0,
-      hotel_makkah_id: form.hotel_makkah_id || null,
-      hotel_madinah_id: form.hotel_madinah_id || null,
-      base_hotel_cost: Number(form.base_hotel_cost) || 0,
-      ticket_cost: Number(form.ticket_cost) || 0,
-      visa_cost: Number(form.visa_cost) || 0,
-      profit_amount: Number(form.profit_amount) || 0,
-    });
-
-    setLoading(false);
-
-    if (error) {
-      console.error(error);
-      setErrorMsg(error.message);
-      return;
+      alert("Umrah package saved successfully");
+      router.push("/umrah/packages");
+    } catch (err: any) {
+      alert(err?.message || "Package save failed");
+    } finally {
+      setSaving(false);
     }
-
-    router.push('/umrah/packages');
   };
 
   return (
-    <div className="p-6 max-w-3xl space-y-4">
-      <h1 className="text-2xl font-semibold">New Umrah Package</h1>
-
-      {errorMsg && <div className="text-red-600 text-sm">{errorMsg}</div>}
-
-      <form onSubmit={onSubmit} className="bg-white border rounded-lg p-4 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Basic fields same as before... */}
-          <div>
-            <label className="block text-xs font-medium mb-1">Code</label>
-            <input
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.code}
-              onChange={(e) => updateField('code', e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Name</label>
-            <input
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.name}
-              onChange={(e) => updateField('name', e.target.value)}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1">Origin City</label>
-            <input
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.origin_city}
-              onChange={(e) => updateField('origin_city', e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1">Nights in Makkah</label>
-            <input
-              type="number"
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.nights_makkah}
-              onChange={(e) => updateField('nights_makkah', e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1">Nights in Madinah</label>
-            <input
-              type="number"
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.nights_madinah}
-              onChange={(e) => updateField('nights_madinah', e.target.value)}
-            />
-          </div>
-
-          {/* Hotel dropdowns */}
-          <div>
-            <label className="block text-xs font-medium mb-1">Makkah Hotel</label>
-            <select
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.hotel_makkah_id}
-              onChange={(e) => updateField('hotel_makkah_id', e.target.value)}
-            >
-              <option value="">Select</option>
-              {hotelsMakkah.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1">Madinah Hotel</label>
-            <select
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.hotel_madinah_id}
-              onChange={(e) => updateField('hotel_madinah_id', e.target.value)}
-            >
-              <option value="">Select</option>
-              {hotelsMadinah.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Costs */}
-          <div>
-            <label className="block text-xs font-medium mb-1">
-              Base Hotel Cost (SAR)
-            </label>
-            <input
-              type="number"
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.base_hotel_cost}
-              onChange={(e) => updateField('base_hotel_cost', e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1">
-              Ticket Cost (SAR)
-            </label>
-            <input
-              type="number"
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.ticket_cost}
-              onChange={(e) => updateField('ticket_cost', e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1">Visa Cost (SAR)</label>
-            <input
-              type="number"
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.visa_cost}
-              onChange={(e) => updateField('visa_cost', e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1">
-              Profit Amount (SAR)
-            </label>
-            <input
-              type="number"
-              className="w-full border rounded px-2 py-1 text-sm"
-              value={form.profit_amount}
-              onChange={(e) => updateField('profit_amount', e.target.value)}
-            />
-          </div>
+    <main className="min-h-screen bg-slate-50 p-6">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-6 rounded-3xl border bg-white p-6 shadow-sm">
+          <h1 className="text-3xl font-bold text-slate-900">
+            Create Umrah Package
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Attach hotel inventory, visa supplier, airline and room-wise package selling prices.
+          </p>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm"
-        >
-          {loading ? 'Saving...' : 'Save Package'}
-        </button>
-      </form>
+        <div className="grid gap-6 xl:grid-cols-4">
+          <section className="xl:col-span-3 space-y-6">
+            <Card title="Package Details">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  label="Package Name"
+                  value={form.package_name}
+                  onChange={(v) => update("package_name", v)}
+                />
+
+                <Input
+                  label="Package Code"
+                  value={form.package_code}
+                  onChange={(v) => update("package_code", v)}
+                />
+
+                <Select
+                  label="Package Type"
+                  value={form.package_type}
+                  options={["group", "private", "custom"]}
+                  onChange={(v) => update("package_type", v)}
+                />
+
+                <Select
+                  label="Status"
+                  value={form.status}
+                  options={["draft", "live", "paused", "closed"]}
+                  onChange={(v) => update("status", v)}
+                />
+
+                <Input
+                  label="Departure Date"
+                  type="date"
+                  value={form.departure_date}
+                  onChange={(v) => update("departure_date", v)}
+                />
+
+                <Input
+                  label="Arrival / Return Date"
+                  type="date"
+                  min={form.departure_date}
+                  value={form.arrival_date}
+                  onChange={(v) => update("arrival_date", v)}
+                />
+
+                <Input
+                  label="Total Days"
+                  type="number"
+                  value={form.total_days}
+                  onChange={(v) => update("total_days", v)}
+                />
+
+                <Input
+                  label="Total Seats"
+                  type="number"
+                  value={form.total_seats}
+                  onChange={(v) => update("total_seats", v)}
+                />
+
+                <Input
+                  label="Makkah Nights"
+                  type="number"
+                  value={form.makkah_nights}
+                  onChange={(v) => update("makkah_nights", v)}
+                />
+
+                <Input
+                  label="Madinah Nights"
+                  type="number"
+                  value={form.madinah_nights}
+                  onChange={(v) => update("madinah_nights", v)}
+                />
+              </div>
+            </Card>
+
+            <Card title="Attach Inventory">
+              {loadingInventory ? (
+                <div className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">
+                  Loading inventory...
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Select
+                    label="Makkah Hotel Inventory"
+                    value={form.makkah_hotel_inventory_id}
+                    options={[
+                      { label: "Select Makkah Hotel", value: "" },
+                      ...makkahHotels.map((x) => ({
+                        label: `${x.hotel_name} — ${x.supplier_name} — ${x.start_date || "-"} to ${x.end_date || "-"}`,
+                        value: x.id,
+                      })),
+                    ]}
+                    onChange={(v) => update("makkah_hotel_inventory_id", v)}
+                  />
+
+                  <Select
+                    label="Madinah Hotel Inventory"
+                    value={form.madinah_hotel_inventory_id}
+                    options={[
+                      { label: "Select Madinah Hotel", value: "" },
+                      ...madinahHotels.map((x) => ({
+                        label: `${x.hotel_name} — ${x.supplier_name} — ${x.start_date || "-"} to ${x.end_date || "-"}`,
+                        value: x.id,
+                      })),
+                    ]}
+                    onChange={(v) => update("madinah_hotel_inventory_id", v)}
+                  />
+
+                  <Select
+                    label="Visa Inventory"
+                    value={form.visa_inventory_id}
+                    options={[
+                      { label: "Select Visa Supplier", value: "" },
+                      ...visas.map((x) => ({
+                        label: `${x.visa_type} — ${x.supplier_name} — ${x.cost_rate || 0} ${x.currency || "SAR"}`,
+                        value: x.id,
+                      })),
+                    ]}
+                    onChange={(v) => update("visa_inventory_id", v)}
+                  />
+
+                  <Input
+                    label="Transport Plan ID / Name"
+                    value={form.transport_plan_id}
+                    onChange={(v) => update("transport_plan_id", v)}
+                  />
+                </div>
+              )}
+            </Card>
+
+            <Card title="Airline & Flight">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Select
+                  label="Airline"
+                  value={form.airline_name}
+                  options={[
+                    { label: "Select Airline", value: "" },
+                    ...airlineOptions.map((x) => ({ label: x, value: x })),
+                  ]}
+                  onChange={(v) => update("airline_name", v)}
+                />
+
+                <Input
+                  label="Flight Number / PNR"
+                  value={form.flight_number}
+                  onChange={(v) => update("flight_number", v)}
+                />
+              </div>
+            </Card>
+
+            <Card title="Room-wise Selling Prices">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  label="Sharing Selling Price"
+                  type="number"
+                  value={form.sharing_price}
+                  onChange={(v) => update("sharing_price", v)}
+                />
+
+                <Input
+                  label="Quad Selling Price"
+                  type="number"
+                  value={form.quad_price}
+                  onChange={(v) => update("quad_price", v)}
+                />
+
+                <Input
+                  label="Triple Selling Price"
+                  type="number"
+                  value={form.triple_price}
+                  onChange={(v) => update("triple_price", v)}
+                />
+
+                <Input
+                  label="Double Selling Price"
+                  type="number"
+                  value={form.double_price}
+                  onChange={(v) => update("double_price", v)}
+                />
+              </div>
+            </Card>
+
+            <Card title="Notes">
+              <textarea
+                value={form.notes}
+                onChange={(e) => update("notes", e.target.value)}
+                className="min-h-32 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                placeholder="Package remarks, inclusions, exclusions, hotel notes..."
+              />
+
+              <button
+                onClick={save}
+                disabled={saving}
+                className="mt-5 rounded-2xl bg-black px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Package"}
+              </button>
+            </Card>
+          </section>
+
+          <aside className="xl:col-span-1 space-y-4">
+            <div className="sticky top-6 space-y-4">
+              <Panel title="Live Cost Preview">
+                <MiniStat label="Visa Cost" value={`${visaCost} SAR`} />
+                <MiniStat label="Sharing Hotel Cost" value={`${hotelCostPreview.sharing} SAR`} />
+                <MiniStat label="Quad Hotel Cost" value={`${hotelCostPreview.quad} SAR`} />
+                <MiniStat label="Triple Hotel Cost" value={`${hotelCostPreview.triple} SAR`} />
+                <MiniStat label="Double Hotel Cost" value={`${hotelCostPreview.double} SAR`} />
+              </Panel>
+
+              <Panel title="Selling Price Preview">
+                <MiniStat label="Sharing" value={`${form.sharing_price || 0} SAR`} strong />
+                <MiniStat label="Quad" value={`${form.quad_price || 0} SAR`} strong />
+                <MiniStat label="Triple" value={`${form.triple_price || 0} SAR`} strong />
+                <MiniStat label="Double" value={`${form.double_price || 0} SAR`} strong />
+              </Panel>
+
+              <Panel title="Package Summary">
+                <p className="text-sm text-slate-500">
+                  Days: <b className="text-slate-900">{form.total_days}</b>
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  Airline: <b className="text-slate-900">{form.airline_name || "-"}</b>
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  Seats: <b className="text-slate-900">{form.total_seats || 0}</b>
+                </p>
+              </Panel>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function calculateDays(start: string, end: string) {
+  if (!start || !end) return 0;
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  const diff = endDate.getTime() - startDate.getTime();
+  if (diff < 0) return 0;
+
+  return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+}
+
+type InputProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  min?: string;
+};
+
+function Input({ label, value, onChange, type = "text", min }: InputProps) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <input
+        type={type}
+        min={min}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+      />
+    </label>
+  );
+}
+
+type SelectOption = string | { label: string; value: string };
+
+type SelectProps = {
+  label: string;
+  value: string;
+  options: SelectOption[];
+  onChange: (value: string) => void;
+};
+
+function Select({ label, value, options, onChange }: SelectProps) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+      >
+        {options.map((item) => {
+          const option =
+            typeof item === "string" ? { label: item, value: item } : item;
+
+          return (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          );
+        })}
+      </select>
+    </label>
+  );
+}
+
+function Card({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border bg-white p-6 shadow-sm">
+      <h2 className="mb-5 text-lg font-bold text-slate-900">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Panel({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border bg-white p-5 shadow-sm">
+      <h3 className="mb-4 font-bold text-slate-900">{title}</h3>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className={strong ? "rounded-2xl bg-emerald-50 p-4" : "rounded-2xl bg-slate-50 p-4"}>
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className={strong ? "mt-1 text-xl font-bold text-emerald-800" : "mt-1 text-xl font-bold text-slate-900"}>
+        {value}
+      </p>
     </div>
   );
 }

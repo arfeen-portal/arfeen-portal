@@ -2,12 +2,12 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdminSafe } from '@/lib/supabaseAdminSafe';
+import { supabaseAdminSafe } from '@/lib/supabaseAdminSafe';
 
 
 export async function GET(req: NextRequest) {
   try {
-    const supabaseAdmin = getSupabaseAdminSafe();
+    const supabaseAdmin = supabaseAdminSafe;;
 
     if (!supabaseAdmin) {
       return NextResponse.json(

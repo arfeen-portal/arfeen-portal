@@ -1,125 +1,183 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSupabaseClient } from '@/lib/supabaseClient';
+import { supabaseClient } from "@/lib/supabaseClient";
 
-const supabase = getSupabaseClient();
+type CalculatorRules = {
+  id?: string;
+  transport_markup: number;
+  flight_markup: number;
+  default_visa_price: number;
+  default_profit: number;
+};
 
 export default function CalculatorForm() {
-  const [rules, setRules] = useState(null);
-  const [nMak, setNMak] = useState("5");
-  const [nMad, setNMad] = useState("5");
-  const [hotelMak, setHotelMak] = useState("200");
-  const [hotelMad, setHotelMad] = useState("150");
-  const [transport, setTransport] = useState("300");
-  const [flight, setFlight] = useState("800");
-  const [price, setPrice] = useState(null);
+  const [rules, setRules] = useState<CalculatorRules | null>(null);
+
+  const [mkk, setMkk] = useState<string>("5");
+  const [mdn, setMdn] = useState<string>("5");
+  const [hotelMkk, setHotelMkk] = useState<string>("200");
+  const [hotelMdn, setHotelMdn] = useState<string>("150");
+  const [transport, setTransport] = useState<string>("300");
+  const [flight, setFlight] = useState<string>("800");
+
+  const [price, setPrice] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("umrah_calculator_rules")
-        .select("*")
-        .eq("is_active", true)
-        .limit(1)
-        .single();
+    async function loadRules() {
+      try {
+        setLoading(true);
 
-      setRules(data);
-    })();
+        const { data, error } = await supabaseClient
+          .from("umrah_calculator_rules")
+          .select("*")
+          .eq("is_active", true)
+          .limit(1)
+          .single();
+
+        if (error) {
+          console.error("Rules fetch error:", error);
+          return;
+        }
+
+        if (data) {
+          setRules(data as CalculatorRules);
+        }
+      } catch (err) {
+        console.error("Unexpected rules error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadRules();
   }, []);
 
   const calc = () => {
-    if (!rules) return;
+    if (rules === null) return;
 
     const totalHotel =
-      Number(nMak) * Number(hotelMak) +
-      Number(nMad) * Number(hotelMad);
+      Number(mkk) * Number(hotelMkk) +
+      Number(mdn) * Number(hotelMdn);
 
     const totalTransport =
-      Number(transport) + Number(rules.transport_markup || 0);
+      Number(transport) +
+      Number(rules.transport_markup ?? 0);
 
     const totalFlight =
-      Number(flight) + Number(rules.flight_markup || 0);
+      Number(flight) +
+      Number(rules.flight_markup ?? 0);
 
     const final =
       totalHotel +
       totalTransport +
       totalFlight +
-      Number(rules.default_visa_price) +
-      Number(rules.default_profit);
+      Number(rules.default_visa_price ?? 0) +
+      Number(rules.default_profit ?? 0);
 
     setPrice(final);
   };
 
   return (
-    <div className="border p-4 rounded space-y-4">
-      {!rules && <p>Loading rules...</p>}
+    <div className="border rounded-xl p-5 bg-white shadow-sm space-y-5">
+      <h2 className="text-xl font-bold">
+        Umrah Price Calculator
+      </h2>
 
-      <div className="grid grid-cols-2 gap-4">
+      {loading && (
+        <div className="text-gray-500">
+          Loading rules...
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label>Makkah nights</label>
+          <label className="block mb-1 font-medium">
+            Makkah Nights
+          </label>
           <input
-            className="border w-full p-2 rounded"
-            value={nMak}
-            onChange={(e) => setNMak(e.target.value)}
+            className="border rounded p-2 w-full"
+            value={mkk}
+            onChange={(e) => setMkk(e.target.value)}
           />
         </div>
 
         <div>
-          <label>Madinah nights</label>
+          <label className="block mb-1 font-medium">
+            Madinah Nights
+          </label>
           <input
-            className="border w-full p-2 rounded"
-            value={nMad}
-            onChange={(e) => setNMad(e.target.value)}
+            className="border rounded p-2 w-full"
+            value={mdn}
+            onChange={(e) => setMdn(e.target.value)}
           />
         </div>
-      </div>
 
-      <div>
-        <label>Makkah hotel rate</label>
-        <input
-          className="border w-full p-2 rounded"
-          value={hotelMak}
-          onChange={(e) => setHotelMak(e.target.value)}
-        />
-      </div>
+        <div>
+          <label className="block mb-1 font-medium">
+            Makkah Hotel Rate
+          </label>
+          <input
+            className="border rounded p-2 w-full"
+            value={hotelMkk}
+            onChange={(e) =>
+              setHotelMkk(e.target.value)
+            }
+          />
+        </div>
 
-      <div>
-        <label>Madinah hotel rate</label>
-        <input
-          className="border w-full p-2 rounded"
-          value={hotelMad}
-          onChange={(e) => setHotelMad(e.target.value)}
-        />
-      </div>
+        <div>
+          <label className="block mb-1 font-medium">
+            Madinah Hotel Rate
+          </label>
+          <input
+            className="border rounded p-2 w-full"
+            value={hotelMdn}
+            onChange={(e) =>
+              setHotelMdn(e.target.value)
+            }
+          />
+        </div>
 
-      <div>
-        <label>Transport cost</label>
-        <input
-          className="border w-full p-2 rounded"
-          value={transport}
-          onChange={(e) => setTransport(e.target.value)}
-        />
-      </div>
+        <div>
+          <label className="block mb-1 font-medium">
+            Transport Cost
+          </label>
+          <input
+            className="border rounded p-2 w-full"
+            value={transport}
+            onChange={(e) =>
+              setTransport(e.target.value)
+            }
+          />
+        </div>
 
-      <div>
-        <label>Flight cost</label>
-        <input
-          className="border w-full p-2 rounded"
-          value={flight}
-          onChange={(e) => setFlight(e.target.value)}
-        />
+        <div>
+          <label className="block mb-1 font-medium">
+            Flight Cost
+          </label>
+          <input
+            className="border rounded p-2 w-full"
+            value={flight}
+            onChange={(e) =>
+              setFlight(e.target.value)
+            }
+          />
+        </div>
       </div>
 
       <button
+        type="button"
         onClick={calc}
-        className="bg-black text-white px-4 py-2 rounded"
+        disabled={loading || rules === null}
+        className="bg-black text-white px-5 py-2 rounded-lg disabled:opacity-50"
       >
         Calculate
       </button>
 
-      {price && (
-        <div className="p-3 bg-green-100 text-green-700 rounded">
+      {price !== null && (
+        <div className="p-4 rounded-lg bg-green-100 text-green-700 font-semibold">
           Final Price: {price} SAR
         </div>
       )}

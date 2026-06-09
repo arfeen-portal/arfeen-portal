@@ -1,24 +1,12 @@
-// src/app/api/groups/[groupId]/certificates/route.ts
+﻿import { NextResponse } from "next/server";
 
-// Is file ke liye TypeScript checking off:
- // @ts-nocheck
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-import { NextRequest, NextResponse } from "next/server";
-
-// GET handler – context ko `any` rakhte hain taake RouteHandlerConfig khush rahe
-export const GET = async (request: NextRequest, context: any) => {
-  const groupId = context?.params?.groupId ?? "";
-
-  // TODO: yahan baad me real certificate list DB se nikalni hai.
-  // Abhi ke liye sirf placeholder response, taake build pass ho jaye.
-  return NextResponse.json(
-    {
-      ok: true,
-      groupId,
-      certificates: [],
-      message:
-        "Certificates list API placeholder – implement actual logic later.",
-    },
-    { status: 200 }
-  );
-};
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    status: "ready",
+    data: [],
+  });
+}

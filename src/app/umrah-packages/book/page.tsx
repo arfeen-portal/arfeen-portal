@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseClient } from "@/lib/supabaseClient";
+
 
 type RoomType = "sharing" | "quad" | "triple" | "double";
 type LeadPriority = "low" | "medium" | "high";
@@ -56,10 +57,11 @@ const ADDONS = [
   },
 ];
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+const supabase = supabaseClient;
+
+
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+
 
 function computeLeadScore(params: {
   room_type: RoomType;
