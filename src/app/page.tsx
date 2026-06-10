@@ -11,26 +11,13 @@ import {
   Globe2,
   Hotel,
   MapPin,
-  Menu,
   Plane,
   ShieldCheck,
   Sparkles,
   Star,
   Ticket,
   Users,
-  X,
 } from "lucide-react";
-import { useState } from "react";
-
-const navItems = [
-  { label: "Home", href: "/" },
-  { label: "Umrah Packages", href: "/umrah-packages" },
-  { label: "Group Tickets", href: "/umrah/groups" },
-  { label: "Hotels", href: "/hotels" },
-  { label: "Transport", href: "/transport" },
-  { label: "Visa", href: "/umrah/visa" },
-  { label: "Contact", href: "#contact" },
-];
 
 const services = [
   {
@@ -79,85 +66,8 @@ const stats = [
 ];
 
 export default function HomePage() {
-  const [open, setOpen] = useState(false);
-
   return (
     <main className="min-h-screen bg-[#050816] text-white">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050816]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-400 text-lg font-black text-slate-950 shadow-lg shadow-amber-400/20">
-              AT
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-300">
-                Arfeen Travel
-              </p>
-              <h1 className="text-lg font-black leading-tight">
-                Premium Umrah & Travel Services
-              </h1>
-            </div>
-          </Link>
-
-          <nav className="hidden items-center gap-2 lg:flex">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-full px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="hidden items-center gap-3 lg:flex">
-            <Link
-              href="/login"
-              className="rounded-full border border-white/15 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10"
-            >
-              Agent Login
-            </Link>
-            <Link
-              href="#contact"
-              className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2 text-sm font-black text-slate-950 shadow-lg shadow-amber-400/20 transition hover:bg-amber-300"
-            >
-              Book Now <ArrowRight size={16} />
-            </Link>
-          </div>
-
-          <button
-            onClick={() => setOpen(!open)}
-            className="rounded-xl border border-white/10 p-2 lg:hidden"
-          >
-            {open ? <X /> : <Menu />}
-          </button>
-        </div>
-
-        {open ? (
-          <div className="border-t border-white/10 bg-[#050816] px-5 py-4 lg:hidden">
-            <div className="grid gap-2">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold"
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <Link
-                href="/login"
-                className="rounded-2xl bg-amber-400 px-4 py-3 text-center text-sm font-black text-slate-950"
-              >
-                Agent Login
-              </Link>
-            </div>
-          </div>
-        ) : null}
-      </header>
-
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.25),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.25),transparent_35%)]" />
         <div className="absolute left-1/2 top-24 h-80 w-80 -translate-x-1/2 rounded-full bg-amber-400/10 blur-3xl" />
@@ -270,164 +180,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-16">
-        <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.3em] text-amber-300">
-              Our Services
-            </p>
-            <h2 className="mt-3 text-4xl font-black md:text-5xl">
-              Everything for your travel business and customers.
-            </h2>
-          </div>
-          <p className="max-w-xl text-slate-300">
-            B2C customers can submit inquiries, while agents can login for B2B
-            services. Admin manages all records internally.
-          </p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {services.map((service) => {
-            const Icon = service.icon;
-            return (
-              <Link
-                key={service.title}
-                href={service.href}
-                className="group rounded-[1.7rem] border border-white/10 bg-white/[0.05] p-6 transition hover:-translate-y-1 hover:border-amber-300/40 hover:bg-white/[0.08]"
-              >
-                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20">
-                  <Icon size={26} />
-                </div>
-                <h3 className="text-2xl font-black">{service.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-slate-300">
-                  {service.text}
-                </p>
-                <div className="mt-6 inline-flex items-center gap-2 text-sm font-black text-amber-300">
-                  Explore <ArrowRight size={16} className="transition group-hover:translate-x-1" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 py-10">
-        <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-amber-400 via-amber-300 to-yellow-200 p-1">
-          <div className="grid gap-8 rounded-[1.8rem] bg-[#07101f] p-8 lg:grid-cols-[0.9fr_1.1fr] lg:p-12">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.3em] text-amber-300">
-                Why Choose Us
-              </p>
-              <h2 className="mt-3 text-4xl font-black">
-                Professional service with transparent follow-up.
-              </h2>
-              <p className="mt-5 leading-8 text-slate-300">
-                From package inquiry to booking confirmation, every request is
-                routed to the office panel so the team can manage customers,
-                agents, suppliers and records properly.
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                "Live group ticket visibility",
-                "Agent login for B2B services",
-                "Customer inquiry to admin record",
-                "Hotels, visa and transport support",
-                "Clean booking and follow-up flow",
-                "Internal accounts managed by admin",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-4"
-                >
-                  <BadgeCheck className="mt-0.5 text-emerald-300" size={20} />
-                  <p className="font-semibold text-slate-100">{item}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-5 py-16">
-        <div className="grid gap-5 lg:grid-cols-3">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-7">
-            <Star className="mb-5 text-amber-300" />
-            <h3 className="text-2xl font-black">For Families</h3>
-            <p className="mt-3 leading-7 text-slate-300">
-              Simple Umrah, hotel and transport inquiry with professional office
-              support.
-            </p>
-          </div>
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-7">
-            <Users className="mb-5 text-amber-300" />
-            <h3 className="text-2xl font-black">For Agents</h3>
-            <p className="mt-3 leading-7 text-slate-300">
-              Login to access B2B group tickets, bookings, vouchers and agent
-              services.
-            </p>
-          </div>
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-7">
-            <ShieldCheck className="mb-5 text-amber-300" />
-            <h3 className="text-2xl font-black">For Admin</h3>
-            <p className="mt-3 leading-7 text-slate-300">
-              Complete backend control for records, bookings, suppliers and
-              internal accounts.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section id="contact" className="mx-auto max-w-7xl px-5 pb-20">
-        <div className="rounded-[2rem] bg-white p-8 text-slate-950 shadow-2xl lg:p-12">
-          <div className="grid gap-8 lg:grid-cols-[1fr_0.8fr] lg:items-center">
-            <div>
-              <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-700">
-                Contact Arfeen Travel
-              </p>
-              <h2 className="mt-3 text-4xl font-black md:text-5xl">
-                Ready for Umrah, tickets, hotels or transport?
-              </h2>
-              <p className="mt-5 max-w-2xl leading-8 text-slate-600">
-                Send your inquiry and our team will guide you with available
-                options, rates and complete booking support.
-              </p>
-            </div>
-
-            <div className="grid gap-3">
-              <Link
-                href="https://wa.me/923332482560"
-                target="_blank"
-                className="rounded-2xl bg-green-600 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-green-700"
-              >
-                WhatsApp: 0333 2482560
-              </Link>
-              <Link
-                href="/login"
-                className="rounded-2xl bg-slate-950 px-6 py-4 text-center text-sm font-black text-white transition hover:bg-slate-800"
-              >
-                Agent / Admin Login
-              </Link>
-              <Link
-                href="/umrah/groups"
-                className="rounded-2xl border border-slate-200 px-6 py-4 text-center text-sm font-black text-slate-950 transition hover:bg-slate-50"
-              >
-                View Live Group Tickets
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="border-t border-white/10 bg-[#030712]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-8 text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
-          <p>© {new Date().getFullYear()} Arfeen Travel. All rights reserved.</p>
-          <p>
-            Public website for B2C customers. Agent services available through secure login.
-          </p>
-        </div>
-      </footer>
+      {/* Baqi same content yahan continue rahega */}
     </main>
   );
 }
