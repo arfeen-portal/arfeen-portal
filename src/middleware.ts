@@ -10,12 +10,32 @@ type Role =
   | "staff"
   | "driver";
 
+const MASTER_DOMAINS = ["localhost", "127.0.0.1"];
+
+const CLIENT_BLOCKED_PREFIXES = [
+  "/admin",
+  "/accounts",
+  "/operations",
+  "/reports",
+  "/branding",
+  "/system",
+  "/ai",
+];
+
 const PUBLIC_PATHS = [
+  "/",
   "/login",
   "/auth",
   "/register",
   "/unauthorized",
   "/api/public",
+  "/umrah-packages",
+  "/umrah/groups",
+  "/hotels",
+  "/transport",
+  "/umrah/visa",
+  "/umrah/ziyarat",
+  "/contact",
 ];
 
 const ROLE_RULES: { prefixes: string[]; roles: Role[] }[] = [
@@ -37,18 +57,26 @@ const ROLE_RULES: { prefixes: string[]; roles: Role[] }[] = [
   },
 ];
 
-function isPublicPath(pathname: string) {
-  return PUBLIC_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`)
+function cleanDomain(host: string) {
+  return host.toLowerCase().replace(/^www\./, "").split(":")[0];
+}
+
+function isMasterDomain(domain: string) {
+  return MASTER_DOMAINS.includes(domain);
+}
+
+function startsWithPrefix(pathname: string, prefixes: string[]) {
+  return prefixes.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
 }
 
+function isPublicPath(pathname: string) {
+  return startsWithPrefix(pathname, PUBLIC_PATHS);
+}
+
 function matchedRule(pathname: string) {
-  return ROLE_RULES.find((rule) =>
-    rule.prefixes.some(
-      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-    )
-  );
+  return ROLE_RULES.find((rule) => startsWithPrefix(pathname, rule.prefixes));
 }
 
 function apiResponse(message: string, status: number) {
@@ -60,7 +88,8 @@ export async function middleware(req: NextRequest) {
   const isApi = pathname.startsWith("/api/");
 
   const host = req.headers.get("host") || "";
-  const cleanHost = host.replace(/^www\./, "").split(":")[0];
+  const domain = cleanDomain(host);
+  const masterDomain = isMasterDomain(domain);
 
   let res = NextResponse.next({
     request: {
@@ -68,14 +97,30 @@ export async function middleware(req: NextRequest) {
     },
   });
 
-  res.headers.set("x-portal-domain", cleanHost);
+  res.headers.set("x-portal-domain", domain);
 
-  if (cleanHost && cleanHost !== "localhost") {
-    res.cookies.set("portal_domain", cleanHost, {
+  if (domain && !masterDomain) {
+    res.cookies.set("portal_domain", domain, {
       path: "/",
       sameSite: "lax",
       httpOnly: false,
     });
+  }
+
+  /**
+   * WHITE-LABEL SECURITY RULE
+   * Client domain par backend/sidebar routes open nahi honge.
+   * Localhost par complete original/master portal allowed rahega.
+   */
+  if (!masterDomain && startsWithPrefix(pathname, CLIENT_BLOCKED_PREFIXES)) {
+    if (isApi) {
+      return apiResponse("This backend route is not available on client domain.", 403);
+    }
+
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
+    url.searchParams.delete("next");
+    return NextResponse.redirect(url);
   }
 
   if (isPublicPath(pathname)) {
