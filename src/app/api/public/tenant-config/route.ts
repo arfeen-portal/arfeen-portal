@@ -53,9 +53,8 @@ export async function GET(req: NextRequest) {
 
   const { data: domainRow, error: domainError } = await supabase
     .from("portal_domains")
-    .select("tenant_id, domain, is_active")
+    .select("tenant_id, domain, is_primary, is_verified, ssl_status")
     .eq("domain", domain)
-    .eq("is_active", true)
     .maybeSingle();
 
   if (domainError || !domainRow) {
