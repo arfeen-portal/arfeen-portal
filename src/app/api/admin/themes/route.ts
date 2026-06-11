@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabaseAdminSafe";
+import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,6 +9,21 @@ type TenantResult = {
   error: string | null;
   status: number;
   tenantId: string | null;
+};
+
+const defaultAnimationSettings = {
+  button_hover: "scale",
+  card_reveal: "fadeUp",
+  page_transition: "slideRight",
+  navbar_style: "glass",
+};
+
+const defaultUiSettings = {
+  glass_opacity: 0.72,
+  shadow_style: "soft",
+  gradient_style: "premium",
+  layout_density: "comfortable",
+  animation_speed: "normal",
 };
 
 async function getTenantId(): Promise<TenantResult> {
@@ -28,7 +43,11 @@ async function getTenantId(): Promise<TenantResult> {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return { error: "Unauthorized", status: 401, tenantId: null };
+    return {
+      error: "Unauthorized",
+      status: 401,
+      tenantId: null,
+    };
   }
 
   const tenantId =
@@ -44,7 +63,26 @@ async function getTenantId(): Promise<TenantResult> {
     };
   }
 
-  return { error: null, status: 200, tenantId };
+  return {
+    error: null,
+    status: 200,
+    tenantId,
+  };
+}
+
+function cleanHex(value: unknown, fallback: string) {
+  const text = String(value ?? "").trim();
+
+  if (/^#[0-9A-Fa-f]{6}$/.test(text)) {
+    return text;
+  }
+
+  return fallback;
+}
+
+function cleanText(value: unknown, fallback = "") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
 }
 
 export async function GET() {
@@ -54,6 +92,8 @@ export async function GET() {
     if (error || !tenantId) {
       return NextResponse.json({ error }, { status });
     }
+
+    const supabaseAdmin = getSupabaseAdminSafe();
 
     if (!supabaseAdmin) {
       return NextResponse.json(
@@ -93,6 +133,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error }, { status });
     }
 
+    const supabaseAdmin = getSupabaseAdminSafe();
+
     if (!supabaseAdmin) {
       return NextResponse.json(
         { error: "Supabase admin client is not configured" },
@@ -102,42 +144,60 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    if (body.is_default === true) {
-      await supabaseAdmin
-        .from("portal_themes")
-        .update({ is_default: false })
-        .eq("tenant_id", tenantId);
-    }
+    const name = cleanText(body.name);
+    const code = cleanText(body.code).toLowerCase();
 
-    const payload = {
-      tenant_id: tenantId,
-      name: String(body.name ?? "").trim(),
-      code: String(body.code ?? "").trim(),
-      is_default: Boolean(body.is_default),
-      logo_url: body.logo_url || null,
-      favicon_url: body.favicon_url || null,
-      login_bg_url: body.login_bg_url || null,
-      primary_color: body.primary_color || "#1d4ed8",
-      secondary_color: body.secondary_color || "#0f172a",
-      accent_color: body.accent_color || "#f59e0b",
-      header_bg: body.header_bg || "#ffffff",
-      sidebar_bg: body.sidebar_bg || "#0f172a",
-      card_bg: body.card_bg || "#ffffff",
-      text_color: body.text_color || "#111827",
-      muted_text_color: body.muted_text_color || "#6b7280",
-      border_color: body.border_color || "#e5e7eb",
-      font_family: body.font_family || "Inter",
-      border_radius: body.border_radius || "16px",
-      custom_css: body.custom_css || null,
-      is_active: body.is_active ?? true,
-    };
-
-    if (!payload.name || !payload.code) {
+    if (!name || !code) {
       return NextResponse.json(
         { error: "name and code are required" },
         { status: 400 }
       );
     }
+
+    if (!/^[a-z0-9-]+$/.test(code)) {
+      return NextResponse.json(
+        { error: "Theme code can only contain lowercase letters, numbers, and hyphens" },
+        { status: 400 }
+      );
+    }
+
+    if (body.is_default === true) {
+      const { error: unsetError } = await supabaseAdmin
+        .from("portal_themes")
+        .update({ is_default: false })
+        .eq("tenant_id", tenantId);
+
+      if (unsetError) {
+        return NextResponse.json({ error: unsetError.message }, { status: 500 });
+      }
+    }
+
+    const payload = {
+      tenant_id: tenantId,
+      name,
+      code,
+      is_default: Boolean(body.is_default),
+      logo_url: body.logo_url || null,
+      favicon_url: body.favicon_url || null,
+      login_bg_url: body.login_bg_url || null,
+
+      primary_color: cleanHex(body.primary_color, "#2563eb"),
+      secondary_color: cleanHex(body.secondary_color, "#0f172a"),
+      accent_color: cleanHex(body.accent_color, "#f59e0b"),
+      header_bg: cleanHex(body.header_bg, "#ffffff"),
+      sidebar_bg: cleanHex(body.sidebar_bg, "#0f172a"),
+      card_bg: cleanHex(body.card_bg, "#ffffff"),
+      text_color: cleanHex(body.text_color, "#111827"),
+      muted_text_color: cleanHex(body.muted_text_color, "#6b7280"),
+      border_color: cleanHex(body.border_color, "#e5e7eb"),
+
+      font_family: cleanText(body.font_family, "Inter"),
+      border_radius: cleanText(body.border_radius, "18px"),
+      custom_css: body.custom_css || null,
+      animation_settings: body.animation_settings ?? defaultAnimationSettings,
+      ui_settings: body.ui_settings ?? defaultUiSettings,
+      is_active: body.is_active ?? true,
+    };
 
     const { data, error: dbError } = await supabaseAdmin
       .from("portal_themes")

@@ -33,6 +33,7 @@ const portalPrefixes = [
   "/system",
   "/ai",
   "/operations",
+  "/dashboard",
 ];
 
 function isPortalPath(pathname: string) {
@@ -45,14 +46,31 @@ function isLoginPath(pathname: string) {
   return pathname === "/login" || pathname.startsWith("/login/");
 }
 
+function isMasterHost(host: string | null) {
+  if (!host) return true;
+
+  const cleanHost = host.split(":")[0];
+
+  return (
+    cleanHost === "localhost" ||
+    cleanHost === "127.0.0.1" ||
+    cleanHost === "0.0.0.0" ||
+    cleanHost.endsWith(".vercel.app")
+  );
+}
+
 export default function ShellRouter({ children }: ShellRouterProps) {
   const pathname = usePathname() || "/";
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const host =
+    typeof window === "undefined" ? null : window.location.host;
+
+  const masterHost = isMasterHost(host);
+
   const tenant = useMemo(() => {
-    if (typeof window === "undefined") return getTenantByHost(null);
-    return getTenantByHost(window.location.host);
-  }, []);
+    return getTenantByHost(host);
+  }, [host]);
 
   const publicNavItems = [
     { label: "Home", href: "/", icon: Home, enabled: true },
@@ -98,16 +116,18 @@ export default function ShellRouter({ children }: ShellRouterProps) {
     return <>{children}</>;
   }
 
-  if (isPortalPath(pathname)) {
+  if (masterHost || isPortalPath(pathname)) {
     return (
-      <div className="min-h-screen md:flex">
+      <div className="min-h-screen bg-slate-50 md:flex">
         <AppSidebar />
 
         <div className="flex min-h-screen flex-1 flex-col">
           <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
             <div className="flex h-16 items-center justify-between px-4 md:px-6">
               <div>
-                <h2 className="text-lg font-semibold">Master Backend Panel</h2>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Master Backend Panel
+                </h2>
                 <p className="text-xs text-slate-500">
                   Software control, client portals, modules, accounts & operations
                 </p>
@@ -117,7 +137,7 @@ export default function ShellRouter({ children }: ShellRouterProps) {
                 href="/"
                 className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
               >
-                View Client Website
+                Dashboard
               </Link>
             </div>
           </header>

@@ -32,38 +32,24 @@ function getSupabaseBrowserClient() {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) return null;
-
   return createBrowserClient(url, anonKey);
 }
 
 function getRedirectPath(role: UserRole, nextPath: string | null) {
   if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
-    if (role === "super_admin" || role === "admin") return nextPath;
-    if (role === "accountant" && nextPath.startsWith("/accounts")) {
-      return nextPath;
-    }
-    if (role === "operations" && nextPath.startsWith("/operations")) {
-      return nextPath;
-    }
-    if (role === "agent" && nextPath.startsWith("/agent")) {
-      return nextPath;
-    }
+    return nextPath;
   }
 
   switch (role) {
     case "super_admin":
     case "admin":
       return "/admin";
-
     case "accountant":
       return "/accounts";
-
     case "operations":
       return "/operations";
-
     case "agent":
       return "/agent/dashboard";
-
     default:
       return "/";
   }
@@ -72,15 +58,19 @@ function getRedirectPath(role: UserRole, nextPath: string | null) {
 export default function LoginPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
+  const [mode, setMode] = useState<"login" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setError("");
+    setSuccess("");
 
     try {
       if (!supabase) {
@@ -106,7 +96,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Wait for auth cookie/session sync
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       const profileRes = await fetch("/api/auth/login-profile", {
@@ -115,15 +104,10 @@ export default function LoginPage() {
         },
       });
 
-      const profileJson = await profileRes
-        .json()
-        .catch(() => ({}));
+      const profileJson = await profileRes.json().catch(() => ({}));
 
       if (!profileRes.ok || !profileJson?.ok) {
-        setError(
-          profileJson?.error ||
-            "User profile could not be loaded."
-        );
+        setError(profileJson?.error || "User profile could not be loaded.");
         return;
       }
 
@@ -137,18 +121,50 @@ export default function LoginPage() {
       const params = new URLSearchParams(window.location.search);
       const nextPath = params.get("next");
 
-      const redirectPath = getRedirectPath(
-        profile.role,
-        nextPath
-      );
-
-      window.location.href = redirectPath;
+      window.location.href = getRedirectPath(profile.role, nextPath);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong."
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleForgotPassword(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (!normalizedEmail) {
+        setError("Email address is required.");
+        return;
+      }
+
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || !json?.ok) {
+        setError(json?.error || "Password reset request failed.");
+        return;
+      }
+
+      setSuccess(
+        "Password reset link sent. Please check your email and set a new password."
       );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setBusy(false);
     }
@@ -159,7 +175,6 @@ export default function LoginPage() {
       <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
         <section className="relative hidden overflow-hidden lg:block">
           <div className="absolute inset-0 bg-gradient-to-br from-[#07101d] via-[#111d33] to-[#020617]" />
-
           <div className="absolute left-16 top-16 h-72 w-72 rounded-full bg-amber-400/20 blur-3xl" />
           <div className="absolute bottom-16 right-12 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
 
@@ -171,10 +186,7 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <h1 className="text-xl font-black">
-                    Arfeen Travel Portal
-                  </h1>
-
+                  <h1 className="text-xl font-black">Arfeen Travel Portal</h1>
                   <p className="text-sm text-slate-300">
                     B2B Umrah, Transport & Accounts ERP
                   </p>
@@ -187,14 +199,12 @@ export default function LoginPage() {
                 </p>
 
                 <h2 className="mt-5 text-5xl font-black leading-tight">
-                  Separate, clean and professional
-                  login for every role.
+                  Separate, clean and professional login for every role.
                 </h2>
 
                 <p className="mt-6 text-lg leading-8 text-slate-300">
-                  Super admin, admin, accountant,
-                  operations and agents are redirected
-                  to their own protected workspaces.
+                  Super admin, admin, accountant, operations and agents are
+                  redirected to their own protected workspaces.
                 </p>
               </div>
             </div>
@@ -210,10 +220,7 @@ export default function LoginPage() {
                   className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur"
                 >
                   <p className="font-bold">{item[0]}</p>
-
-                  <p className="mt-2 text-sm text-slate-300">
-                    {item[1]}
-                  </p>
+                  <p className="mt-2 text-sm text-slate-300">{item[1]}</p>
                 </div>
               ))}
             </div>
@@ -222,28 +229,35 @@ export default function LoginPage() {
 
         <section className="flex items-center justify-center px-5 py-10">
           <form
-            onSubmit={handleLogin}
+            onSubmit={mode === "login" ? handleLogin : handleForgotPassword}
             className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white p-8 text-slate-950 shadow-2xl"
           >
             <div className="mb-8">
               <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700">
                 <ShieldCheck size={16} />
-                Secure Portal Login
+                {mode === "login" ? "Secure Portal Login" : "Password Recovery"}
               </div>
 
               <h1 className="text-3xl font-black">
-                Welcome back
+                {mode === "login" ? "Welcome back" : "Forgot password?"}
               </h1>
 
               <p className="mt-2 text-sm text-slate-500">
-                Login to continue to your
-                Arfeen Travel workspace.
+                {mode === "login"
+                  ? "Login to continue to your Arfeen Travel workspace."
+                  : "Enter your tenant registered email. We will send a secure reset link."}
               </p>
             </div>
 
             {error ? (
               <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                 {error}
+              </div>
+            ) : null}
+
+            {success ? (
+              <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                {success}
               </div>
             ) : null}
 
@@ -254,16 +268,11 @@ export default function LoginPage() {
                 </span>
 
                 <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
-                  <Mail
-                    size={18}
-                    className="text-slate-400"
-                  />
+                  <Mail size={18} className="text-slate-400" />
 
                   <input
                     value={email}
-                    onChange={(e) =>
-                      setEmail(e.target.value)
-                    }
+                    onChange={(e) => setEmail(e.target.value)}
                     type="email"
                     autoComplete="email"
                     required
@@ -273,30 +282,27 @@ export default function LoginPage() {
                 </div>
               </label>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-slate-700">
-                  Password
-                </span>
+              {mode === "login" ? (
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-slate-700">
+                    Password
+                  </span>
 
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
-                  <Lock
-                    size={18}
-                    className="text-slate-400"
-                  />
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
+                    <Lock size={18} className="text-slate-400" />
 
-                  <input
-                    value={password}
-                    onChange={(e) =>
-                      setPassword(e.target.value)
-                    }
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    className="h-12 w-full bg-transparent text-sm font-semibold outline-none"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </label>
+                    <input
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      className="h-12 w-full bg-transparent text-sm font-semibold outline-none"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </label>
+              ) : null}
             </div>
 
             <button
@@ -304,9 +310,29 @@ export default function LoginPage() {
               disabled={busy}
               className="mt-7 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white shadow-lg transition hover:bg-slate-800 disabled:opacity-60"
             >
-              {busy ? "Signing in..." : "Login to Portal"}
+              {busy
+                ? mode === "login"
+                  ? "Signing in..."
+                  : "Sending reset link..."
+                : mode === "login"
+                  ? "Login to Portal"
+                  : "Send Password Reset Link"}
 
               <ArrowRight size={18} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setError("");
+                setSuccess("");
+                setMode(mode === "login" ? "forgot" : "login");
+              }}
+              className="mt-4 w-full text-center text-sm font-bold text-slate-600 hover:text-slate-950"
+            >
+              {mode === "login"
+                ? "Forgot password?"
+                : "Back to login"}
             </button>
 
             <div className="mt-6 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
@@ -316,8 +342,7 @@ export default function LoginPage() {
               </div>
 
               <p className="mt-1 text-amber-800">
-                Your portal will only show data
-                and pages allowed for your role.
+                Your portal will only show data and pages allowed for your role.
               </p>
             </div>
           </form>

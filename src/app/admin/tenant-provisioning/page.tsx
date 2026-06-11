@@ -12,11 +12,17 @@ import {
   XCircle,
 } from "lucide-react";
 
+type TenantStatus =
+  | "pending_approval"
+  | "approved_ready"
+  | "live"
+  | "rejected";
+
 type Tenant = {
   id: string;
   tenant_name: string;
   slug: string;
-  status: string;
+  status: TenantStatus | string;
   approval_status: string;
   custom_domain: string | null;
   subdomain: string | null;
@@ -36,45 +42,106 @@ type Tenant = {
 
 const moduleOptions = [
   "dashboard",
-  "accounts",
   "transport",
   "umrah",
-  "agents",
-  "reports",
   "hotels",
+  "visa",
+  "contact",
+  "group_tickets",
+  "agents",
+  "accounts",
+  "reports",
   "vouchers",
   "refunds",
   "airline_reports",
-  "ai_tools",
   "white_label",
 ];
 
-const planOptions = ["starter", "professional", "enterprise", "white_label_pro"];
+const publicModuleDefaults = [
+  "dashboard",
+  "transport",
+  "umrah",
+  "hotels",
+  "visa",
+  "contact",
+  "group_tickets",
+  "agents",
+  "accounts",
+  "reports",
+  "vouchers",
+  "refunds",
+  "airline_reports",
+  "white_label",
+];
+
+const planOptions = [
+  "starter",
+  "professional",
+  "enterprise",
+  "white_label_pro",
+];
+
+const initialForm = {
+  tenant_name: "",
+  custom_domain: "",
+  logo_url: "",
+  primary_color: "#0f766e",
+  secondary_color: "#111827",
+  contact_email: "",
+  contact_phone: "",
+  bio: "",
+  plan_name: "starter",
+  allowed_modules: publicModuleDefaults,
+};
+
+function cleanDomain(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
+}
 
 export default function TenantProvisioningPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
-    tenant_name: "",
-    custom_domain: "",
-    logo_url: "",
-    primary_color: "#0f766e",
-    secondary_color: "#111827",
-    contact_email: "",
-    contact_phone: "",
-    bio: "",
-    plan_name: "starter",
-    allowed_modules: ["dashboard", "accounts", "transport", "umrah", "agents", "reports"],
-  });
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const [form, setForm] = useState(initialForm);
 
   async function loadTenants() {
     setLoading(true);
-    const res = await fetch("/api/admin/tenant-provisioning", { cache: "no-store" });
-    const json = await res.json();
-    if (json.ok) setTenants(json.tenants || []);
-    setLoading(false);
+
+    try {
+      const res = await fetch("/api/admin/tenant-provisioning", {
+        cache: "no-store",
+      });
+
+      const json = await res.json();
+
+      if (json.ok) {
+        setTenants(json.tenants || []);
+      } else {
+        setMessage({
+          type: "error",
+          text: json.error || "Failed to load tenants.",
+        });
+      }
+    } catch {
+      setMessage({
+        type: "error",
+        text: "Failed to load tenants.",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -99,58 +166,134 @@ export default function TenantProvisioningPage() {
     }));
   }
 
-  async function createTenant() {
-    setSaving(true);
-
-    const res = await fetch("/api/admin/tenant-provisioning", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    const json = await res.json();
-
-    if (json.ok) {
-      setForm({
-        tenant_name: "",
-        custom_domain: "",
-        logo_url: "",
-        primary_color: "#0f766e",
-        secondary_color: "#111827",
-        contact_email: "",
-        contact_phone: "",
-        bio: "",
-        plan_name: "starter",
-        allowed_modules: ["dashboard", "accounts", "transport", "umrah", "agents", "reports"],
-      });
-      await loadTenants();
-    } else {
-      alert(json.error || "Tenant creation failed.");
+  function validateForm() {
+    if (!form.tenant_name.trim()) {
+      return "Tenant / Agency name is required.";
     }
 
-    setSaving(false);
+    const domain = cleanDomain(form.custom_domain);
+
+    if (domain && !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) {
+      return "Custom domain format is invalid.";
+    }
+
+    if (
+      form.contact_email &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)
+    ) {
+      return "Contact email format is invalid.";
+    }
+
+    if (!form.allowed_modules.length) {
+      return "At least one module must be selected.";
+    }
+
+    return null;
   }
 
-  async function actionTenant(id: string, action: "approve" | "reject" | "go_live") {
-    const res = await fetch("/api/admin/tenant-provisioning", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        action,
-        approved_by: "admin",
-        rejection_reason: "Tenant setup rejected after admin review.",
-      }),
-    });
+  async function createTenant() {
+    setMessage(null);
 
-    const json = await res.json();
+    const validationError = validateForm();
 
-    if (!json.ok) {
-      alert(json.error || "Action failed.");
+    if (validationError) {
+      setMessage({ type: "error", text: validationError });
       return;
     }
 
-    await loadTenants();
+    setSaving(true);
+
+    try {
+      const payload = {
+        ...form,
+        custom_domain: cleanDomain(form.custom_domain),
+      };
+
+      const res = await fetch("/api/admin/tenant-provisioning", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+
+      if (json.ok) {
+        setForm(initialForm);
+        setMessage({
+          type: "success",
+          text: "Tenant created. Now approve it, then use Go Live.",
+        });
+        await loadTenants();
+      } else {
+        setMessage({
+          type: "error",
+          text: json.error || "Tenant creation failed.",
+        });
+      }
+    } catch {
+      setMessage({
+        type: "error",
+        text: "Tenant creation failed.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function actionTenant(
+    id: string,
+    action: "approve" | "reject" | "go_live"
+  ) {
+    setMessage(null);
+    setActionLoading(`${id}:${action}`);
+
+    try {
+      const res = await fetch("/api/admin/tenant-provisioning", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          action,
+          approved_by: "admin",
+          rejection_reason: "Tenant setup rejected after admin review.",
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!json.ok) {
+        setMessage({
+          type: "error",
+          text: json.error || "Action failed.",
+        });
+        return;
+      }
+
+      const successText =
+        action === "approve"
+          ? "Tenant approved. You can now click Go Live."
+          : action === "go_live"
+            ? "Tenant is now live."
+            : "Tenant rejected.";
+
+      setMessage({
+        type: "success",
+        text: successText,
+      });
+
+      await loadTenants();
+    } catch {
+      setMessage({
+        type: "error",
+        text: "Action failed.",
+      });
+    } finally {
+      setActionLoading(null);
+    }
   }
 
   return (
@@ -166,32 +309,62 @@ export default function TenantProvisioningPage() {
                 Tenant Provisioning Engine
               </h1>
               <p className="mt-2 max-w-3xl text-sm text-slate-300">
-                New agent portal create karo, admin approval do, custom domain attach karo,
-                theme select karo, modules enable karo aur approval ke baad portal live karo.
+                Client website create karo, domain attach karo, modules select
+                karo, approve karo aur phir Go Live karo.
               </p>
             </div>
 
             <div className="rounded-2xl border border-teal-300/20 bg-black/30 p-4 text-sm">
               <div className="flex items-center gap-2 text-teal-300">
                 <Rocket size={18} />
-                One-click approved launch model
+                Controlled launch model
               </div>
             </div>
           </div>
         </div>
 
+        {message ? (
+          <div
+            className={[
+              "rounded-2xl border px-4 py-3 text-sm font-semibold",
+              message.type === "success"
+                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                : "border-rose-400/30 bg-rose-400/10 text-rose-200",
+            ].join(" ")}
+          >
+            {message.text}
+          </div>
+        ) : null}
+
         <section className="grid gap-4 md:grid-cols-4">
-          <StatCard icon={<Building2 />} label="Total Tenants" value={stats.total} />
-          <StatCard icon={<Clock />} label="Pending Approval" value={stats.pending} />
-          <StatCard icon={<ShieldCheck />} label="Approved Ready" value={stats.approved} />
-          <StatCard icon={<Globe2 />} label="Live Domains" value={stats.live} />
+          <StatCard
+            icon={<Building2 />}
+            label="Total Tenants"
+            value={stats.total}
+          />
+          <StatCard
+            icon={<Clock />}
+            label="Pending Approval"
+            value={stats.pending}
+          />
+          <StatCard
+            icon={<ShieldCheck />}
+            label="Approved Ready"
+            value={stats.approved}
+          />
+          <StatCard
+            icon={<Globe2 />}
+            label="Live Domains"
+            value={stats.live}
+          />
         </section>
 
         <section className="grid gap-6 lg:grid-cols-3">
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 lg:col-span-1">
             <h2 className="text-xl font-bold">Create Tenant</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Ye tenant pehle pending approval me jayega.
+              Pehle pending approval me jayega. Backend/sidebar public domain
+              par nahi jayega.
             </p>
 
             <div className="mt-5 space-y-4">
@@ -199,14 +372,14 @@ export default function TenantProvisioningPage() {
                 label="Tenant / Agency Name"
                 value={form.tenant_name}
                 onChange={(v) => setForm({ ...form, tenant_name: v })}
-                placeholder="Example: ABC Umrah Services"
+                placeholder="Example: Arfeen Portal"
               />
 
               <Input
                 label="Custom Domain"
                 value={form.custom_domain}
                 onChange={(v) => setForm({ ...form, custom_domain: v })}
-                placeholder="portal.agentdomain.com"
+                placeholder="arfeenportal.com"
               />
 
               <Input
@@ -231,10 +404,14 @@ export default function TenantProvisioningPage() {
               />
 
               <div>
-                <label className="text-sm font-medium text-slate-300">Plan</label>
+                <label className="text-sm font-medium text-slate-300">
+                  Plan
+                </label>
                 <select
                   value={form.plan_name}
-                  onChange={(e) => setForm({ ...form, plan_name: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, plan_name: e.target.value })
+                  }
                   className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-3 text-sm outline-none focus:border-teal-400"
                 >
                   {planOptions.map((p) => (
@@ -252,6 +429,7 @@ export default function TenantProvisioningPage() {
                   onChange={(v) => setForm({ ...form, primary_color: v })}
                   placeholder="#0f766e"
                 />
+
                 <Input
                   label="Secondary"
                   value={form.secondary_color}
@@ -261,7 +439,9 @@ export default function TenantProvisioningPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-slate-300">Agency Bio</label>
+                <label className="text-sm font-medium text-slate-300">
+                  Agency Bio
+                </label>
                 <textarea
                   value={form.bio}
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
@@ -272,7 +452,9 @@ export default function TenantProvisioningPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-slate-300">Allowed Modules</label>
+                <label className="text-sm font-medium text-slate-300">
+                  Allowed Modules
+                </label>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {moduleOptions.map((m) => (
                     <button
@@ -293,7 +475,7 @@ export default function TenantProvisioningPage() {
 
               <button
                 onClick={createTenant}
-                disabled={saving || !form.tenant_name}
+                disabled={saving || !form.tenant_name.trim()}
                 className="w-full rounded-xl bg-teal-500 px-4 py-3 font-bold text-slate-950 transition hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? "Creating..." : "Create Tenant For Approval"}
@@ -306,14 +488,15 @@ export default function TenantProvisioningPage() {
               <div>
                 <h2 className="text-xl font-bold">Tenant Approval Queue</h2>
                 <p className="mt-1 text-sm text-slate-400">
-                  Approve ke baad hi live button use karo.
+                  Flow: Pending → Approve → Go Live.
                 </p>
               </div>
+
               <Paintbrush className="text-teal-300" />
             </div>
 
-            <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
-              <table className="w-full min-w-[900px] text-left text-sm">
+            <div className="mt-5 overflow-x-auto rounded-2xl border border-white/10">
+              <table className="w-full min-w-[950px] text-left text-sm">
                 <thead className="bg-white/5 text-xs uppercase tracking-wider text-slate-400">
                   <tr>
                     <th className="px-4 py-3">Tenant</th>
@@ -328,13 +511,19 @@ export default function TenantProvisioningPage() {
                 <tbody className="divide-y divide-white/10">
                   {loading ? (
                     <tr>
-                      <td className="px-4 py-8 text-center text-slate-400" colSpan={6}>
+                      <td
+                        className="px-4 py-8 text-center text-slate-400"
+                        colSpan={6}
+                      >
                         Loading tenants...
                       </td>
                     </tr>
                   ) : tenants.length === 0 ? (
                     <tr>
-                      <td className="px-4 py-8 text-center text-slate-400" colSpan={6}>
+                      <td
+                        className="px-4 py-8 text-center text-slate-400"
+                        colSpan={6}
+                      >
                         No tenant created yet.
                       </td>
                     </tr>
@@ -342,18 +531,24 @@ export default function TenantProvisioningPage() {
                     tenants.map((tenant) => (
                       <tr key={tenant.id} className="bg-slate-950/30">
                         <td className="px-4 py-4">
-                          <div className="font-bold">{tenant.tenant_name}</div>
+                          <div className="font-bold">
+                            {tenant.tenant_name}
+                          </div>
                           <div className="text-xs text-slate-400">
-                            /{tenant.slug} · {tenant.contact_phone || "No phone"}
+                            /{tenant.slug} ·{" "}
+                            {tenant.contact_phone || "No phone"}
                           </div>
                         </td>
 
                         <td className="px-4 py-4">
                           <div className="text-slate-200">
-                            {tenant.custom_domain || `${tenant.subdomain}.yourportal.com`}
+                            {tenant.custom_domain ||
+                              `${tenant.subdomain}.yourportal.com`}
                           </div>
                           <div className="text-xs text-slate-500">
-                            {tenant.domain_verified ? "Verified" : "Not verified"}
+                            {tenant.domain_verified
+                              ? "Verified"
+                              : "Not verified"}
                           </div>
                         </td>
 
@@ -374,28 +569,11 @@ export default function TenantProvisioningPage() {
                         </td>
 
                         <td className="px-4 py-4">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => actionTenant(tenant.id, "approve")}
-                              className="rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-400/10"
-                            >
-                              Approve
-                            </button>
-
-                            <button
-                              onClick={() => actionTenant(tenant.id, "go_live")}
-                              className="rounded-lg border border-teal-400/30 px-3 py-2 text-xs font-bold text-teal-300 hover:bg-teal-400/10"
-                            >
-                              Go Live
-                            </button>
-
-                            <button
-                              onClick={() => actionTenant(tenant.id, "reject")}
-                              className="rounded-lg border border-rose-400/30 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-400/10"
-                            >
-                              Reject
-                            </button>
-                          </div>
+                          <TenantActions
+                            tenant={tenant}
+                            actionLoading={actionLoading}
+                            onAction={actionTenant}
+                          />
                         </td>
                       </tr>
                     ))
@@ -407,6 +585,79 @@ export default function TenantProvisioningPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function TenantActions({
+  tenant,
+  actionLoading,
+  onAction,
+}: {
+  tenant: Tenant;
+  actionLoading: string | null;
+  onAction: (
+    id: string,
+    action: "approve" | "reject" | "go_live"
+  ) => Promise<void>;
+}) {
+  const isBusy = (action: string) => actionLoading === `${tenant.id}:${action}`;
+
+  if (tenant.status === "pending_approval") {
+    return (
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => onAction(tenant.id, "approve")}
+          disabled={isBusy("approve")}
+          className="rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-400/10 disabled:opacity-50"
+        >
+          {isBusy("approve") ? "Approving..." : "Approve"}
+        </button>
+
+        <button
+          onClick={() => onAction(tenant.id, "reject")}
+          disabled={isBusy("reject")}
+          className="rounded-lg border border-rose-400/30 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-400/10 disabled:opacity-50"
+        >
+          {isBusy("reject") ? "Rejecting..." : "Reject"}
+        </button>
+      </div>
+    );
+  }
+
+  if (tenant.status === "approved_ready") {
+    return (
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => onAction(tenant.id, "go_live")}
+          disabled={isBusy("go_live")}
+          className="rounded-lg border border-teal-400/30 px-3 py-2 text-xs font-bold text-teal-300 hover:bg-teal-400/10 disabled:opacity-50"
+        >
+          {isBusy("go_live") ? "Going Live..." : "Go Live"}
+        </button>
+
+        <button
+          onClick={() => onAction(tenant.id, "reject")}
+          disabled={isBusy("reject")}
+          className="rounded-lg border border-rose-400/30 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-400/10 disabled:opacity-50"
+        >
+          Reject
+        </button>
+      </div>
+    );
+  }
+
+  if (tenant.status === "live") {
+    return (
+      <div className="text-right text-xs font-semibold text-emerald-300">
+        Live customer website
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-right text-xs font-semibold text-rose-300">
+      Rejected
+    </div>
   );
 }
 
@@ -463,25 +714,27 @@ function StatusBadge({ status }: { status: string }) {
           className: "bg-emerald-400/10 text-emerald-300",
         }
       : status === "approved_ready"
-      ? {
-          icon: <ShieldCheck size={14} />,
-          text: "Approved",
-          className: "bg-teal-400/10 text-teal-300",
-        }
-      : status === "rejected"
-      ? {
-          icon: <XCircle size={14} />,
-          text: "Rejected",
-          className: "bg-rose-400/10 text-rose-300",
-        }
-      : {
-          icon: <Clock size={14} />,
-          text: "Pending",
-          className: "bg-amber-400/10 text-amber-300",
-        };
+        ? {
+            icon: <ShieldCheck size={14} />,
+            text: "Approved",
+            className: "bg-teal-400/10 text-teal-300",
+          }
+        : status === "rejected"
+          ? {
+              icon: <XCircle size={14} />,
+              text: "Rejected",
+              className: "bg-rose-400/10 text-rose-300",
+            }
+          : {
+              icon: <Clock size={14} />,
+              text: "Pending",
+              className: "bg-amber-400/10 text-amber-300",
+            };
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${config.className}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${config.className}`}
+    >
       {config.icon}
       {config.text}
     </span>

@@ -1,4 +1,7 @@
-import { supabaseClient } from "@/lib/supabaseClient";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type ApiKeyRow = {
   id: string;
@@ -11,7 +14,15 @@ type ApiKeyRow = {
 };
 
 export default async function ApiKeysPage() {
-  const supabase = supabaseClient;
+  const supabase = await createSupabaseServerClient();
+
+  if (!supabase) {
+    return (
+      <div className="p-6 text-red-500">
+        Supabase server client not configured.
+      </div>
+    );
+  }
 
   const { data: keys, error } = await supabase
     .from("api_keys")
@@ -19,11 +30,15 @@ export default async function ApiKeysPage() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    throw new Error("Failed to load API keys: " + error.message);
+    return (
+      <div className="p-6 text-red-500">
+        Failed to load API keys: {error.message}
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4 p-6">
       <h1 className="text-2xl font-bold">API Keys</h1>
 
       <p className="text-sm text-gray-500">
@@ -31,24 +46,26 @@ export default async function ApiKeysPage() {
         create kar sakta hai.
       </p>
 
-      <div className="card text-sm">
+      <div className="overflow-x-auto rounded border bg-white p-4 text-sm">
         <table className="w-full">
           <thead>
-            <tr className="text-left text-xs text-gray-500 border-b">
-              <th>Agent</th>
-              <th>Key</th>
-              <th>Status</th>
-              <th>Created</th>
+            <tr className="border-b text-left text-xs text-gray-500">
+              <th className="py-2 pr-4">Agent</th>
+              <th className="py-2 pr-4">Key</th>
+              <th className="py-2 pr-4">Status</th>
+              <th className="py-2 pr-4">Created</th>
             </tr>
           </thead>
 
           <tbody>
             {(keys as ApiKeyRow[] | null)?.map((k) => (
               <tr key={k.id} className="border-b last:border-0">
-                <td className="py-2">{k.agent?.name ?? "-"}</td>
-                <td className="font-mono text-xs">{k.key_value}</td>
-                <td>{k.is_active ? "Active" : "Inactive"}</td>
-                <td className="text-xs text-gray-500">
+                <td className="py-2 pr-4">{k.agent?.name ?? "-"}</td>
+                <td className="py-2 pr-4 font-mono text-xs">{k.key_value}</td>
+                <td className="py-2 pr-4">
+                  {k.is_active ? "Active" : "Inactive"}
+                </td>
+                <td className="py-2 pr-4 text-xs text-gray-500">
                   {new Date(k.created_at).toLocaleString()}
                 </td>
               </tr>
@@ -64,8 +81,6 @@ export default async function ApiKeysPage() {
           </tbody>
         </table>
       </div>
-
-      {/* Baad me yahan "Generate Key" form laga dena */}
     </div>
   );
 }
