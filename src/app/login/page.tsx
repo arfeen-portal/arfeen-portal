@@ -32,6 +32,7 @@ function getSupabaseBrowserClient() {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) return null;
+
   return createBrowserClient(url, anonKey);
 }
 
@@ -44,12 +45,16 @@ function getRedirectPath(role: UserRole, nextPath: string | null) {
     case "super_admin":
     case "admin":
       return "/admin";
+
     case "accountant":
       return "/accounts";
+
     case "operations":
       return "/operations";
+
     case "agent":
       return "/agent/dashboard";
+
     default:
       return "/";
   }
@@ -284,9 +289,23 @@ export default function LoginPage() {
 
               {mode === "login" ? (
                 <label className="block">
-                  <span className="mb-2 block text-sm font-bold text-slate-700">
-                    Password
-                  </span>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="block text-sm font-bold text-slate-700">
+                      Password
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError("");
+                        setSuccess("");
+                        setMode("forgot");
+                      }}
+                      className="text-xs font-black text-amber-600 hover:text-amber-700"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
 
                   <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4">
                     <Lock size={18} className="text-slate-400" />
@@ -321,19 +340,19 @@ export default function LoginPage() {
               <ArrowRight size={18} />
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setError("");
-                setSuccess("");
-                setMode(mode === "login" ? "forgot" : "login");
-              }}
-              className="mt-4 w-full text-center text-sm font-bold text-slate-600 hover:text-slate-950"
-            >
-              {mode === "login"
-                ? "Forgot password?"
-                : "Back to login"}
-            </button>
+            {mode === "forgot" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setSuccess("");
+                  setMode("login");
+                }}
+                className="mt-4 w-full text-center text-sm font-bold text-slate-600 hover:text-slate-950"
+              >
+                Back to login
+              </button>
+            ) : null}
 
             <div className="mt-6 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
               <div className="flex gap-2 font-bold">
