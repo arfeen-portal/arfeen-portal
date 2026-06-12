@@ -58,22 +58,40 @@ export const clientTenant: TenantConfig = {
   },
 };
 
+function normalizeHost(host?: string | null): string {
+  if (!host) return "";
+
+  return host
+    .toLowerCase()
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split("/")[0]
+    .replace(/:443$/, "")
+    .replace(/:80$/, "");
+}
+
 const tenants: Record<string, TenantConfig> = {
   "localhost:3000": masterTenant,
   "127.0.0.1:3000": masterTenant,
+  localhost: masterTenant,
+  "127.0.0.1": masterTenant,
 
   "arfeenportal.com": clientTenant,
-  "www.arfeenportal.com": clientTenant,
 };
 
 export function getTenantByHost(host?: string | null): TenantConfig {
-  if (!host) return masterTenant;
+  const cleanHost = normalizeHost(host);
 
-  const cleanHost = host.toLowerCase().replace(/^https?:\/\//, "");
+  if (!cleanHost) return masterTenant;
 
   return tenants[cleanHost] || clientTenant;
 }
 
-export function isMasterHost(host?: string | null) {
+export function isMasterHost(host?: string | null): boolean {
   return getTenantByHost(host).type === "master";
+}
+
+export function getNormalizedHost(host?: string | null): string {
+  return normalizeHost(host);
 }
