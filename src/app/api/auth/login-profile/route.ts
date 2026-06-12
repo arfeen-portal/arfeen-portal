@@ -4,28 +4,51 @@ import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+type TenantRow = {
+  id: string;
+  name: string | null;
+  is_active: boolean | null;
+};
+
 function cleanHost(value: string) {
   return value
     .toLowerCase()
     .trim()
     .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
     .replace(/:\d+$/, "")
     .replace(/\/.*$/, "");
 }
 
-function isLocalHost(host: string) {
-  return host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
+function normalizeDomain(value: string) {
+  return cleanHost(value).replace(/^www\./, "");
 }
 
-async function getTenantByDomain(supabase: any, host: string) {
-  const { data: domainRow, error: domainError } = await supabase
+function isLocalHost(host: string) {
+  const normalized = normalizeDomain(host);
+
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized.endsWith(".localhost")
+  );
+}
+
+async function getTenantByDomain(supabase: any, rawHost: string): Promise<TenantRow | null> {
+  const host = normalizeDomain(rawHost);
+
+  if (!host) return null;
+
+  const { data: domains, error: domainError } = await supabase
     .from("portal_domains")
-    .select("tenant_id, domain, is_verified, ssl_status")
-    .eq("domain", host)
-    .maybeSingle();
+    .select("tenant_id, domain, is_verified, ssl_status");
 
   if (domainError) throw domainError;
+
+  const domainRow = (domains || []).find((row: any) => {
+    const dbDomain = normalizeDomain(String(row.domain || ""));
+    return dbDomain === host;
+  });
+
   if (!domainRow?.tenant_id) return null;
 
   const { data: tenantRow, error: tenantError } = await supabase
@@ -35,9 +58,10 @@ async function getTenantByDomain(supabase: any, host: string) {
     .maybeSingle();
 
   if (tenantError) throw tenantError;
+
   if (!tenantRow?.id || tenantRow.is_active !== true) return null;
 
-  return tenantRow;
+  return tenantRow as TenantRow;
 }
 
 export async function GET(req: NextRequest) {
