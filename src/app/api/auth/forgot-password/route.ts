@@ -23,19 +23,25 @@ function isValidEmail(value: string) {
 }
 
 async function getTenantByDomain(supabase: any, host: string) {
-  const { data, error } = await supabase
+  const { data: domainRow, error: domainError } = await supabase
     .from("portal_domains")
-    .select("tenant_id, domain, is_verified, ssl_status, tenants:tenant_id(id,name,is_active)")
+    .select("tenant_id, domain, is_verified, ssl_status")
     .eq("domain", host)
     .maybeSingle();
 
-  if (error) throw error;
+  if (domainError) throw domainError;
+  if (!domainRow?.tenant_id) return null;
 
-  const tenant = Array.isArray(data?.tenants) ? data.tenants[0] : data?.tenants;
+  const { data: tenantRow, error: tenantError } = await supabase
+    .from("tenants")
+    .select("id,name,is_active")
+    .eq("id", domainRow.tenant_id)
+    .maybeSingle();
 
-  if (!data || !tenant?.id || tenant.is_active !== true) return null;
+  if (tenantError) throw tenantError;
+  if (!tenantRow?.id || tenantRow.is_active !== true) return null;
 
-  return tenant;
+  return tenantRow;
 }
 
 export async function POST(req: NextRequest) {
