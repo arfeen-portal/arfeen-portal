@@ -157,7 +157,7 @@ function InvoiceFormContent() {
     });
   }
 
-  // FIXED: Sync with /api/accounts/invoices/cancel endpoint standard mapping
+  // Sync with /api/accounts/invoices/[id]/cancel endpoint standard mapping.
   async function handleCancelInvoice() {
     if (!invoiceId) {
       alert("Only saved invoice can be cancelled.");
@@ -176,10 +176,10 @@ function InvoiceFormContent() {
     try {
       setLoading(true);
 
-      const res = await fetch("/api/accounts/invoices/cancel", {
+      const res = await fetch(`/api/accounts/invoices/${invoiceId}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoice_id: invoiceId, reason: reason.trim() }),
+        body: JSON.stringify({ reason: reason.trim() }),
       });
 
       const data = await res.json();

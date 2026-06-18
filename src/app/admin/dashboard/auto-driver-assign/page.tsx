@@ -31,7 +31,7 @@ export default function AutoDriverAssignPage() {
   const [filter, setFilter] = useState("all");
 
   useEffect(() => {
-    fetch("/api/accounts/auto-driver-assign", { cache: "no-store" })
+    fetch("/api/auto-driver-assign", { cache: "no-store" })
       .then((res) => res.json())
       .then((json) => setRows(json.data || []));
   }, []);

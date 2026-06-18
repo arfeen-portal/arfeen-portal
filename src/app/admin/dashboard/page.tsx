@@ -611,7 +611,7 @@ export default function AdminDashboardPage() {
               { title: "New Transport Booking", href: "/transport/new", icon: Car },
               { title: "Create Invoice", href: "/accounts/invoices/new", icon: Receipt },
               { title: "Agent Ledger", href: "/accounts/agent-ledger", icon: Users },
-              { title: "Operations Live Control", href: "/operations/live-control", icon: Bus },
+              { title: "Operations Live Control", href: "/oprations/live-control", icon: Bus },
               {
                 title: "AI Financial Health",
                 href: "/accounts/ai-financial-health",

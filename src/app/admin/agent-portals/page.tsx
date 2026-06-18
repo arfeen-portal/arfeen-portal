@@ -161,7 +161,7 @@ export default function AgentPortalsPage() {
       const [portalRes, themeRes, domainRes] = await Promise.all([
         fetch("/api/admin/agent-portals", { cache: "no-store" }),
         fetch("/api/admin/themes", { cache: "no-store" }),
-        fetch("/api/admin/branding/domains", { cache: "no-store" }),
+        fetch("/api/branding/domains", { cache: "no-store" }),
       ]);
 
       const portalJson = await portalRes.json();

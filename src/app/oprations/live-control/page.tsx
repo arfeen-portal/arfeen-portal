@@ -29,7 +29,7 @@ export default function OperationsLiveControlPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const res = await fetch("/api/operations/live-control", {
+      const res = await fetch("/api/oprations/livecontrol", {
         cache: "no-store",
       });
       const json = await res.json();
@@ -42,7 +42,7 @@ export default function OperationsLiveControlPage() {
   async function systemAction(system_key: string, action: "toggle" | "run_now") {
     setBusyKey(system_key + action);
     try {
-      await fetch("/api/operations/live-control", {
+      await fetch("/api/oprations/livecontrol", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ system_key, action }),

@@ -33,9 +33,9 @@ export default function WhiteLabelPage() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/white-label");
+    const res = await fetch("/api/branding/themes");
     const json = await res.json();
-    setItems(json.items ?? []);
+    setItems(json.themes ?? []);
     setLoading(false);
   }
 
@@ -44,7 +44,7 @@ export default function WhiteLabelPage() {
   }, []);
 
   async function createTenant() {
-    const res = await fetch("/api/white-label", {
+    const res = await fetch("/api/branding/themes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -53,11 +53,11 @@ export default function WhiteLabelPage() {
     await load();
   }
 
-  async function toggleActive(id: string, is_active: boolean) {
-    const res = await fetch(`/api/white-label/${id}`, {
+  async function toggleActive(tenant: Tenant, is_active: boolean) {
+    const res = await fetch(`/api/branding/themes/${tenant.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_active }),
+      body: JSON.stringify({ ...tenant, is_active }),
     });
     if (!res.ok) return alert("Error updating tenant");
     await load();
@@ -208,7 +208,7 @@ export default function WhiteLabelPage() {
                 <td className="px-3 py-2 text-right">
                   <button
                     className="text-xs underline"
-                    onClick={() => toggleActive(t.id, !t.is_active)}
+                    onClick={() => toggleActive(t, !t.is_active)}
                   >
                     {t.is_active ? "Disable" : "Enable"}
                   </button>
