@@ -15,44 +15,47 @@ function cleanHost(value: string) {
     .toLowerCase()
     .trim()
     .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
     .replace(/:\d+$/, "")
     .replace(/\/.*$/, "");
 }
 
-function normalizeDomain(value: string) {
-  return cleanHost(value).replace(/^www\./, "");
+function getRequestHosts(req: NextRequest) {
+  const host = req.headers.get("host") || "";
+  const forwardedHost = req.headers.get("x-forwarded-host") || "";
+  const origin = req.headers.get("origin") || req.nextUrl.origin || "";
+
+  return Array.from(
+    new Set([host, forwardedHost, origin].map(cleanHost).filter(Boolean))
+  );
 }
 
 function isLocalHost(host: string) {
-  const normalized = normalizeDomain(host);
-
-  return (
-    normalized === "localhost" ||
-    normalized === "127.0.0.1" ||
-    normalized.endsWith(".localhost")
-  );
+  return host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
 }
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-async function getTenantByDomain(supabase: any, rawHost: string): Promise<TenantRow | null> {
-  const host = normalizeDomain(rawHost);
+async function getTenantByDomain(supabase: any, hosts: string[]): Promise<TenantRow | null> {
+  const domainList = Array.from(
+    new Set(
+      hosts.flatMap((h) => {
+        const clean = cleanHost(h);
+        return [clean, `www.${clean}`];
+      })
+    )
+  );
 
-  if (!host) return null;
-
-  const { data: domains, error: domainError } = await supabase
+  const { data: domainRow, error: domainError } = await supabase
     .from("portal_domains")
-    .select("tenant_id, domain, is_verified, ssl_status");
+    .select("tenant_id, domain")
+    .in("domain", domainList)
+    .limit(1)
+    .maybeSingle();
 
   if (domainError) throw domainError;
-
-  const domainRow = (domains || []).find((row: any) => {
-    const dbDomain = normalizeDomain(String(row.domain || ""));
-    return dbDomain === host;
-  });
-
   if (!domainRow?.tenant_id) return null;
 
   const { data: tenantRow, error: tenantError } = await supabase
@@ -62,7 +65,6 @@ async function getTenantByDomain(supabase: any, rawHost: string): Promise<Tenant
     .maybeSingle();
 
   if (tenantError) throw tenantError;
-
   if (!tenantRow?.id || tenantRow.is_active !== true) return null;
 
   return tenantRow as TenantRow;
@@ -89,17 +91,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const host = cleanHost(req.headers.get("host") || "");
-    const origin = req.nextUrl.origin;
+    const hosts = getRequestHosts(req);
+    const isLocal = hosts.some(isLocalHost);
 
     let tenant: TenantRow | null = null;
 
-    if (!isLocalHost(host)) {
-      tenant = await getTenantByDomain(supabase, host);
+    if (!isLocal) {
+      tenant = await getTenantByDomain(supabase, hosts);
 
       if (!tenant) {
         return NextResponse.json(
-          { ok: false, error: "Live tenant not found for this domain." },
+          {
+            ok: false,
+            error: `Live tenant not found for this domain: ${hosts.join(", ")}`,
+          },
           { status: 403 }
         );
       }
@@ -131,7 +136,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/reset-password`,
+      redirectTo: `${req.nextUrl.origin}/reset-password`,
     });
 
     if (resetError) {

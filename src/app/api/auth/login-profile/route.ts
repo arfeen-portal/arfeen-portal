@@ -4,50 +4,40 @@ import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type TenantRow = {
-  id: string;
-  name: string | null;
-  is_active: boolean | null;
-};
-
-function cleanHost(value: string) {
-  return value
+function normalizeDomain(value: string | null) {
+  return String(value || "")
     .toLowerCase()
     .trim()
+    .split(",")[0]
     .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
     .replace(/:\d+$/, "")
     .replace(/\/.*$/, "");
 }
 
-function normalizeDomain(value: string) {
-  return cleanHost(value).replace(/^www\./, "");
-}
-
-function isLocalHost(host: string) {
-  const normalized = normalizeDomain(host);
-
+function getRequestHost(req: NextRequest) {
   return (
-    normalized === "localhost" ||
-    normalized === "127.0.0.1" ||
-    normalized.endsWith(".localhost")
+    normalizeDomain(req.headers.get("x-forwarded-host")) ||
+    normalizeDomain(req.headers.get("x-vercel-forwarded-host")) ||
+    normalizeDomain(req.headers.get("host"))
   );
 }
 
-async function getTenantByDomain(supabase: any, rawHost: string): Promise<TenantRow | null> {
-  const host = normalizeDomain(rawHost);
+function isLocalHost(host: string) {
+  return host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
+}
 
-  if (!host) return null;
+async function getTenantByDomain(supabase: any, host: string) {
+  const domainVariants = Array.from(new Set([host, `www.${host}`]));
 
-  const { data: domains, error: domainError } = await supabase
+  const { data: domainRows, error: domainError } = await supabase
     .from("portal_domains")
-    .select("tenant_id, domain, is_verified, ssl_status");
+    .select("tenant_id, domain, is_verified, ssl_status")
+    .in("domain", domainVariants);
 
   if (domainError) throw domainError;
 
-  const domainRow = (domains || []).find((row: any) => {
-    const dbDomain = normalizeDomain(String(row.domain || ""));
-    return dbDomain === host;
-  });
+  const domainRow = domainRows?.[0];
 
   if (!domainRow?.tenant_id) return null;
 
@@ -55,13 +45,12 @@ async function getTenantByDomain(supabase: any, rawHost: string): Promise<Tenant
     .from("tenants")
     .select("id,name,is_active")
     .eq("id", domainRow.tenant_id)
+    .eq("is_active", true)
     .maybeSingle();
 
   if (tenantError) throw tenantError;
 
-  if (!tenantRow?.id || tenantRow.is_active !== true) return null;
-
-  return tenantRow as TenantRow;
+  return tenantRow || null;
 }
 
 export async function GET(req: NextRequest) {
@@ -75,14 +64,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.replace("Bearer ", "").trim();
+    const token = (req.headers.get("authorization") || "")
+      .replace("Bearer ", "")
+      .trim();
 
     if (!token) {
-      return NextResponse.json(
-        { ok: false, error: "Missing auth token." },
-        { status: 401 }
-      );
+      return NextResponse.json({ ok: false, error: "Missing auth token." }, { status: 401 });
     }
 
     const {
@@ -119,14 +106,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const host = cleanHost(req.headers.get("host") || "");
+    const host = getRequestHost(req);
 
     if (!isLocalHost(host)) {
       const tenant = await getTenantByDomain(supabase, host);
 
       if (!tenant) {
         return NextResponse.json(
-          { ok: false, error: "Live tenant not found for this domain." },
+          { ok: false, error: `Live tenant not found for this domain: ${host}` },
           { status: 403 }
         );
       }
@@ -139,10 +126,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      ok: true,
-      user: profile,
-    });
+    return NextResponse.json({ ok: true, user: profile });
   } catch (error: any) {
     return NextResponse.json(
       { ok: false, error: error?.message || "Unexpected server error." },
