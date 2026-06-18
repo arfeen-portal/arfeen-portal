@@ -1,11 +1,50 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type SheetRow = Record<string, unknown>;
+
+async function requireSuperAdmin() {
+  const supabase = await createSupabaseServerClient();
+
+  if (!supabase) {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user?.email) {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("users")
+    .select("role")
+    .eq("email", user.email.toLowerCase())
+    .maybeSingle<{ role: string | null }>();
+
+  if (profileError || profile?.role !== "super_admin") {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
+  return { ok: true as const };
+}
 
 function normalizeKey(key: string): string {
   return key.toLowerCase().replace(/\s+/g, "").replace(/_/g, "").trim();
@@ -34,6 +73,9 @@ function getNumber(row: SheetRow, key: string | null): number {
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireSuperAdmin();
+    if (!auth.ok) return auth.response;
+
     const supabase = getSupabaseAdminSafe();
 
     if (!supabase) {

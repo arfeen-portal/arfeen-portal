@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,73 @@ function isValidDomain(value: string) {
   return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(value);
 }
 
+type AuthorizedUser = {
+  role: "super_admin" | "admin";
+  tenantId: string | null;
+};
+
+async function requireDomainAdmin() {
+  const supabase = await createSupabaseServerClient();
+
+  if (!supabase) {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user?.email) {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("users")
+    .select("tenant_id, role")
+    .eq("email", user.email.toLowerCase())
+    .maybeSingle<{ tenant_id: string | null; role: string | null }>();
+
+  if (profileError || !profile?.role) {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
+  if (profile.role !== "super_admin" && profile.role !== "admin") {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
+  if (profile.role === "admin" && !profile.tenant_id) {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ ok: false, error: "Tenant not assigned to this user." }, { status: 403 }),
+    };
+  }
+
+  return {
+    ok: true as const,
+    user: {
+      role: profile.role,
+      tenantId: profile.tenant_id ?? null,
+    } as AuthorizedUser,
+  };
+}
+
 export async function GET() {
+  const auth = await requireDomainAdmin();
+  if (!auth.ok) return auth.response;
+
   const supabase = getSupabaseAdminSafe();
 
   if (!supabase) {
@@ -27,10 +94,15 @@ export async function GET() {
     );
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("portal_domains")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select("*");
+
+  if (auth.user.role !== "super_admin") {
+    query = query.eq("tenant_id", auth.user.tenantId);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
@@ -43,6 +115,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireDomainAdmin();
+  if (!auth.ok) return auth.response;
+
   const supabase = getSupabaseAdminSafe();
 
   if (!supabase) {
@@ -80,13 +155,19 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.is_primary) {
-    await supabase
+    let primaryQuery = supabase
       .from("portal_domains")
       .update({ is_primary: false })
       .eq("is_primary", true);
+
+    if (auth.user.role !== "super_admin") {
+      primaryQuery = primaryQuery.eq("tenant_id", auth.user.tenantId);
+    }
+
+    await primaryQuery;
   }
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     domain,
     host_type: body.host_type || "custom",
     status: body.status || "active",
@@ -99,6 +180,12 @@ export async function POST(req: NextRequest) {
     login_subtitle: body.login_subtitle || null,
     updated_at: new Date().toISOString(),
   };
+
+  if (auth.user.role === "super_admin") {
+    payload.tenant_id = body.tenant_id || null;
+  } else {
+    payload.tenant_id = auth.user.tenantId;
+  }
 
   const { data, error } = await supabase
     .from("portal_domains")
