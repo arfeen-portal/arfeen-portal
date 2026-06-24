@@ -50,13 +50,13 @@ export default async function JournalDetailPage({
 
           <div className="flex gap-3">
             <Link
-              href="/accounting/journal"
+              href="/accounts/journal"
               className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700"
             >
               Back
             </Link>
             <Link
-              href={`/accounting/journal/${id}/edit`}
+              href={`/accounts/journal/${id}/edit`}
               className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white"
             >
               Edit Entry

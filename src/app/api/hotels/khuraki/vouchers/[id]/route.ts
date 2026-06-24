@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
@@ -7,18 +8,21 @@ function res(data: any, status = 200) {
   return NextResponse.json(data, { status });
 }
 
-async function auth(req: NextRequest, supabase: any) {
-  const token = (req.headers.get("authorization") || "").replace("Bearer ", "").trim();
-  if (!token) return { error: "Missing auth token", status: 401 };
+async function auth() {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { error: "Missing auth session", status: 401 };
 
-  const { data: userData, error } = await supabase.auth.getUser(token);
+  const { data: userData, error } = await supabase.auth.getUser();
   if (error || !userData?.user) return { error: "Invalid auth token", status: 401 };
 
+  const email = userData.user.email?.toLowerCase();
+  if (!email) return { error: "Invalid auth token", status: 401 };
+
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("tenant_id, role")
-    .eq("id", userData.user.id)
-    .single();
+    .eq("email", email)
+    .maybeSingle();
 
   if (!profile?.tenant_id) return { error: "Tenant not found", status: 403 };
 
@@ -28,11 +32,11 @@ async function auth(req: NextRequest, supabase: any) {
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await ctx.params;
+    const a = await auth();
+    if ("error" in a) return res({ ok: false, error: a.error }, a.status);
+
     const supabase = getSupabaseAdminSafe();
     if (!supabase) return res({ ok: false, error: "Supabase admin not configured" }, 500);
-
-    const a = await auth(req, supabase);
-    if ("error" in a) return res({ ok: false, error: a.error }, a.status);
 
     const body = await req.json();
     const action = body.action;

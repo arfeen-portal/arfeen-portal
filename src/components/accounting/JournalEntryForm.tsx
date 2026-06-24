@@ -172,7 +172,7 @@ export default function JournalEntryForm({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Save failed");
 
-      router.push(`/accounting/journal/${json.id}`);
+      router.push(`/accounts/journal/${json.id}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -391,7 +391,7 @@ export default function JournalEntryForm({
           <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
             <button
               type="button"
-              onClick={() => router.push("/accounting/journal")}
+              onClick={() => router.push("/accounts/journal")}
               className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white"
             >
               Cancel

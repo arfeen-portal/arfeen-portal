@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
@@ -8,20 +9,22 @@ function json(data: any, status = 200) {
   return NextResponse.json(data, { status });
 }
 
-async function getTenantId(req: NextRequest, supabase: any) {
-  const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.replace("Bearer ", "").trim();
+async function getTenantId() {
+  const supabase = await createSupabaseServerClient();
 
-  if (!token) return { error: "Missing auth token", status: 401 };
+  if (!supabase) return { error: "Missing auth session", status: 401 };
 
-  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData?.user) return { error: "Invalid auth token", status: 401 };
 
+  const email = userData.user.email?.toLowerCase();
+  if (!email) return { error: "Invalid auth token", status: 401 };
+
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("tenant_id, role")
-    .eq("id", userData.user.id)
-    .single();
+    .eq("email", email)
+    .maybeSingle();
 
   if (!profile?.tenant_id) return { error: "Tenant not found", status: 403 };
 
@@ -49,11 +52,11 @@ function aiScores(input: any) {
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await getTenantId();
+    if ("error" in auth) return json({ ok: false, error: auth.error }, auth.status);
+
     const supabase = getSupabaseAdminSafe();
     if (!supabase) return json({ ok: false, error: "Supabase admin not configured" }, 500);
-
-    const auth = await getTenantId(req, supabase);
-    if ("error" in auth) return json({ ok: false, error: auth.error }, auth.status);
 
     const url = new URL(req.url);
     const status = url.searchParams.get("status");
@@ -97,11 +100,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await getTenantId();
+    if ("error" in auth) return json({ ok: false, error: auth.error }, auth.status);
+
     const supabase = getSupabaseAdminSafe();
     if (!supabase) return json({ ok: false, error: "Supabase admin not configured" }, 500);
-
-    const auth = await getTenantId(req, supabase);
-    if ("error" in auth) return json({ ok: false, error: auth.error }, auth.status);
 
     const body = await req.json();
 

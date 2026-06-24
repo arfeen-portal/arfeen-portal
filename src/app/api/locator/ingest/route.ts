@@ -327,7 +327,7 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
 
-    const { error: liveError } = await supabase.from("locator_live").upsert(
+    const { error: liveError } = await supabase.from("live_locations").upsert(
       {
         profile_id: validation.payload.profile_id,
         lat: validation.payload.lat,

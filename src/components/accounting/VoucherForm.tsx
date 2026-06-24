@@ -191,7 +191,7 @@ export default function VoucherForm({ voucherType }: Props) {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Voucher save failed");
 
-      router.push(`/accounting/journal/${json.id}`);
+      router.push(`/accounts/journal/${json.id}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Voucher save failed");
@@ -465,7 +465,7 @@ export default function VoucherForm({ voucherType }: Props) {
           <div className="flex flex-wrap justify-end gap-3">
             <button
               type="button"
-              onClick={() => router.push("/accounting/journal")}
+              onClick={() => router.push("/accounts/journal")}
               className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700"
             >
               Cancel

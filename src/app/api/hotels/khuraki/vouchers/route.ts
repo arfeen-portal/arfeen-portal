@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
@@ -8,18 +9,21 @@ function res(data: any, status = 200) {
   return NextResponse.json(data, { status });
 }
 
-async function auth(req: NextRequest, supabase: any) {
-  const token = (req.headers.get("authorization") || "").replace("Bearer ", "").trim();
-  if (!token) return { error: "Missing auth token", status: 401 };
+async function auth() {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { error: "Missing auth session", status: 401 };
 
-  const { data: userData, error } = await supabase.auth.getUser(token);
+  const { data: userData, error } = await supabase.auth.getUser();
   if (error || !userData?.user) return { error: "Invalid auth token", status: 401 };
 
+  const email = userData.user.email?.toLowerCase();
+  if (!email) return { error: "Invalid auth token", status: 401 };
+
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("tenant_id, role")
-    .eq("id", userData.user.id)
-    .single();
+    .eq("email", email)
+    .maybeSingle();
 
   if (!profile?.tenant_id) return { error: "Tenant not found", status: 403 };
 
@@ -48,13 +52,33 @@ function riskScore(body: any) {
   };
 }
 
+async function verifyContract(
+  supabase: any,
+  contractId: string | null,
+  tenantId: string
+) {
+  if (!contractId) return { ok: true as const };
+
+  const { data, error } = await supabase
+    .from("hotel_khuraki_contracts")
+    .select("id")
+    .eq("id", contractId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (error) return { ok: false as const, error: error.message, status: 500 };
+  if (!data) return { ok: false as const, error: "Contract not found", status: 404 };
+
+  return { ok: true as const };
+}
+
 export async function GET(req: NextRequest) {
   try {
+    const a = await auth();
+    if ("error" in a) return res({ ok: false, error: a.error }, a.status);
+
     const supabase = getSupabaseAdminSafe();
     if (!supabase) return res({ ok: false, error: "Supabase admin not configured" }, 500);
-
-    const a = await auth(req, supabase);
-    if ("error" in a) return res({ ok: false, error: a.error }, a.status);
 
     const url = new URL(req.url);
     const status = url.searchParams.get("status") || "all";
@@ -94,11 +118,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const a = await auth();
+    if ("error" in a) return res({ ok: false, error: a.error }, a.status);
+
     const supabase = getSupabaseAdminSafe();
     if (!supabase) return res({ ok: false, error: "Supabase admin not configured" }, 500);
-
-    const a = await auth(req, supabase);
-    if ("error" in a) return res({ ok: false, error: a.error }, a.status);
 
     const body = await req.json();
 
@@ -106,11 +130,15 @@ export async function POST(req: NextRequest) {
       return res({ ok: false, error: "Required fields missing" }, 400);
     }
 
+    const contractId = body.contract_id || null;
+    const contractCheck = await verifyContract(supabase, contractId, a.tenant_id);
+    if (!contractCheck.ok) return res({ ok: false, error: contractCheck.error }, contractCheck.status);
+
     const ai = riskScore(body);
 
     const payload = {
       tenant_id: a.tenant_id,
-      contract_id: body.contract_id || null,
+      contract_id: contractId,
       booking_id: body.booking_id || null,
       voucher_no: body.voucher_no,
       customer_name: body.customer_name,
