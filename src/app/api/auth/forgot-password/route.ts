@@ -5,15 +5,15 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type PortalDomainRow = {
-  tenant_id: string | null;
-  domain: string | null;
-  is_active: boolean | null;
-  is_verified: boolean | null;
-  ssl_status: string | null;
+  tenant_id?: string | null;
+  domain?: string | null;
+  is_active?: boolean | null;
+  is_verified?: boolean | null;
+  ssl_status?: string | null;
 };
 
 function cleanHost(value: string) {
-  return value
+  return String(value || "")
     .toLowerCase()
     .trim()
     .split(",")[0]
@@ -40,14 +40,16 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-async function getTenantIdByDomain(supabase: any, domain: string): Promise<string | null> {
-  const { data: domainRow, error: domainError } = await supabase
+async function getTenantIdByDomain(supabase: any, domain: string) {
+  const { data, error } = await supabase
     .from("portal_domains")
     .select("tenant_id, domain, is_active, is_verified, ssl_status")
     .eq("domain", domain)
-    .maybeSingle<PortalDomainRow>();
+    .maybeSingle();
 
-  if (domainError) throw domainError;
+  if (error) throw error;
+
+  const domainRow = data as PortalDomainRow | null;
 
   const active = domainRow?.is_active === true;
   const verified = domainRow?.is_verified !== false;
@@ -61,6 +63,7 @@ async function getTenantIdByDomain(supabase: any, domain: string): Promise<strin
   });
 
   if (!tenantId || !active || !verified || !sslActive) return null;
+
   return tenantId;
 }
 
@@ -76,8 +79,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const email = String(body.email || "").trim().toLowerCase();
-    const normalizedDomain = getRequestDomain(req, body.domain);
+
+    const email = String(body?.email || "").trim().toLowerCase();
+    const normalizedDomain = getRequestDomain(req, body?.domain);
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json(
@@ -87,7 +91,6 @@ export async function POST(req: NextRequest) {
     }
 
     const isLocal = isLocalHost(normalizedDomain);
-
     let tenantId: string | null = null;
 
     if (!isLocal) {
