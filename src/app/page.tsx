@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   Car,
@@ -10,8 +8,6 @@ import {
   Wallet,
   LineChart,
   Route,
-  RefreshCw,
-  Plus,
 } from "lucide-react";
 
 type RevenuePoint = {
@@ -42,16 +38,7 @@ const initialSummary: DashboardSummary = {
   topRoutes: [],
 };
 
-const navItems: { label: string; href: string }[] = [
-  { label: "Dashboard", href: "/" },
-  { label: "Transport", href: "/transport" },
-  { label: "Hotels", href: "/hotels" },
-  { label: "Umrah Packages", href: "/umrah-packages" },
-  { label: "Accounting", href: "/accounts" },
-];
-
 export default function HomePage() {
-  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<DashboardSummary>(initialSummary);
 
@@ -82,68 +69,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
-      <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0f274d] text-lg font-bold text-white">
-              AT
-            </div>
-
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-slate-400">
-                Arfeen Travel
-              </p>
-              <p className="text-lg font-semibold text-white">
-                Arfeen Travel Portal
-              </p>
-            </div>
-          </div>
-
-          <nav className="flex flex-wrap items-center gap-2 text-xs md:text-sm">
-            {navItems.map((item) => {
-              const active =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname?.startsWith(item.href);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={[
-                    "rounded-full border px-4 py-2 transition",
-                    active
-                      ? "border-[#0f274d] bg-[#0f274d] text-white"
-                      : "border-slate-700 bg-transparent text-slate-300 hover:border-slate-500 hover:bg-slate-900",
-                  ].join(" ")}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-2 justify-end">
-            <button
-              onClick={loadSummary}
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
-
-            <Link
-              href="/transport/new"
-              className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-300"
-            >
-              <Plus className="h-4 w-4" />
-              New Booking
-            </Link>
-          </div>
-        </div>
-      </header>
-
       <main className="mx-auto max-w-7xl px-4 py-10 md:px-6">
         <section className="mb-10 text-center">
           <p className="mb-3 text-xs uppercase tracking-[0.3em] text-amber-300 md:text-sm">
