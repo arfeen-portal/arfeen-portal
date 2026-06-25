@@ -27,13 +27,18 @@ type ShellRouterProps = {
 const portalPrefixes = [
   "/admin",
   "/accounts",
+  "/accountant",
+  "/agent",
   "/agents",
   "/reports",
   "/branding",
   "/system",
   "/ai",
   "/operations",
+  "/oprations",
   "/dashboard",
+  "/dashboard-internal",
+  "/driver",
 ];
 
 function isPortalPath(pathname: string) {

@@ -155,6 +155,7 @@ export default function LoginPage() {
         },
         body: JSON.stringify({
           email: normalizedEmail,
+          domain: window.location.hostname,
         }),
       });
 

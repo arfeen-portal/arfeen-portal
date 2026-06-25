@@ -4,29 +4,31 @@ import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type TenantRow = {
-  id: string;
-  name: string | null;
+type PortalDomainRow = {
+  tenant_id: string | null;
+  domain: string | null;
   is_active: boolean | null;
+  is_verified: boolean | null;
+  ssl_status: string | null;
 };
 
 function cleanHost(value: string) {
   return value
     .toLowerCase()
     .trim()
+    .split(",")[0]
     .replace(/^https?:\/\//, "")
     .replace(/^www\./, "")
-    .replace(/:\d+$/, "")
-    .replace(/\/.*$/, "");
+    .replace(/\/.*$/, "")
+    .replace(/:\d+$/, "");
 }
 
-function getRequestHosts(req: NextRequest) {
-  const host = req.headers.get("host") || "";
-  const forwardedHost = req.headers.get("x-forwarded-host") || "";
-  const origin = req.headers.get("origin") || req.nextUrl.origin || "";
-
-  return Array.from(
-    new Set([host, forwardedHost, origin].map(cleanHost).filter(Boolean))
+function getRequestDomain(req: NextRequest, bodyDomain?: string | null) {
+  return (
+    cleanHost(bodyDomain || "") ||
+    cleanHost(req.headers.get("x-forwarded-host") || "") ||
+    cleanHost(req.headers.get("x-vercel-forwarded-host") || "") ||
+    cleanHost(req.headers.get("host") || "")
   );
 }
 
@@ -38,36 +40,28 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-async function getTenantByDomain(supabase: any, hosts: string[]): Promise<TenantRow | null> {
-  const domainList = Array.from(
-    new Set(
-      hosts.flatMap((h) => {
-        const clean = cleanHost(h);
-        return [clean, `www.${clean}`];
-      })
-    )
-  );
-
+async function getTenantIdByDomain(supabase: any, domain: string): Promise<string | null> {
   const { data: domainRow, error: domainError } = await supabase
     .from("portal_domains")
-    .select("tenant_id, domain")
-    .in("domain", domainList)
-    .limit(1)
-    .maybeSingle();
+    .select("tenant_id, domain, is_active, is_verified, ssl_status")
+    .eq("domain", domain)
+    .maybeSingle<PortalDomainRow>();
 
   if (domainError) throw domainError;
-  if (!domainRow?.tenant_id) return null;
 
-  const { data: tenantRow, error: tenantError } = await supabase
-    .from("tenants")
-    .select("id,name,is_active")
-    .eq("id", domainRow.tenant_id)
-    .maybeSingle();
+  const active = domainRow?.is_active === true;
+  const verified = domainRow?.is_verified !== false;
+  const sslActive = !domainRow?.ssl_status || domainRow.ssl_status === "active";
+  const tenantId = domainRow?.tenant_id || null;
 
-  if (tenantError) throw tenantError;
-  if (!tenantRow?.id || tenantRow.is_active !== true) return null;
+  console.log("forgot-password domain lookup", {
+    normalizedDomain: domain,
+    domainRowFound: Boolean(domainRow),
+    tenantId,
+  });
 
-  return tenantRow as TenantRow;
+  if (!tenantId || !active || !verified || !sslActive) return null;
+  return tenantId;
 }
 
 export async function POST(req: NextRequest) {
@@ -83,6 +77,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const email = String(body.email || "").trim().toLowerCase();
+    const normalizedDomain = getRequestDomain(req, body.domain);
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json(
@@ -91,19 +86,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const hosts = getRequestHosts(req);
-    const isLocal = hosts.some(isLocalHost);
+    const isLocal = isLocalHost(normalizedDomain);
 
-    let tenant: TenantRow | null = null;
+    let tenantId: string | null = null;
 
     if (!isLocal) {
-      tenant = await getTenantByDomain(supabase, hosts);
+      tenantId = await getTenantIdByDomain(supabase, normalizedDomain);
 
-      if (!tenant) {
+      if (!tenantId) {
         return NextResponse.json(
           {
             ok: false,
-            error: `Live tenant not found for this domain: ${hosts.join(", ")}`,
+            error: `Live tenant not found for this domain: ${normalizedDomain}`,
           },
           { status: 403 }
         );
@@ -115,11 +109,17 @@ export async function POST(req: NextRequest) {
       .select("id,email,tenant_id,role")
       .eq("email", email);
 
-    if (tenant?.id) {
-      userQuery = userQuery.eq("tenant_id", tenant.id);
+    if (tenantId) {
+      userQuery = userQuery.eq("tenant_id", tenantId);
     }
 
     const { data: profile, error: profileError } = await userQuery.maybeSingle();
+
+    console.log("forgot-password user lookup", {
+      normalizedDomain,
+      tenantId,
+      emailFound: Boolean(profile),
+    });
 
     if (profileError) {
       return NextResponse.json(
