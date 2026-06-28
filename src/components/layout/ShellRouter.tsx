@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
@@ -9,9 +9,11 @@ import {
   Home,
   Hotel,
   LogIn,
+  LogOut,
   Menu,
   ShieldCheck,
   Ticket,
+  UserPlus,
   X,
   Car,
   Phone,
@@ -19,6 +21,7 @@ import {
 
 import AppSidebar from "@/components/layout/AppSidebar";
 import { getTenantByHost } from "@/lib/tenantConfig";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type ShellRouterProps = {
   children: ReactNode;
@@ -51,6 +54,10 @@ function isLoginPath(pathname: string) {
   return pathname === "/login" || pathname.startsWith("/login/");
 }
 
+function isStandalonePath(pathname: string) {
+  return isLoginPath(pathname) || pathname === "/agents/register";
+}
+
 function isMasterHost(host: string | null) {
   if (!host) return true;
 
@@ -66,7 +73,9 @@ function isMasterHost(host: string | null) {
 
 export default function ShellRouter({ children }: ShellRouterProps) {
   const pathname = usePathname() || "/";
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   const host =
     typeof window === "undefined" ? null : window.location.host;
@@ -76,6 +85,18 @@ export default function ShellRouter({ children }: ShellRouterProps) {
   const tenant = useMemo(() => {
     return getTenantByHost(host);
   }, [host]);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await supabaseClient.auth.signOut();
+      router.push("/login");
+      router.refresh();
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   const publicNavItems = [
     { label: "Home", href: "/", icon: Home, enabled: true },
@@ -117,7 +138,7 @@ export default function ShellRouter({ children }: ShellRouterProps) {
     },
   ].filter((item) => item.enabled);
 
-  if (isLoginPath(pathname)) {
+  if (isStandalonePath(pathname)) {
     return <>{children}</>;
   }
 
@@ -138,12 +159,24 @@ export default function ShellRouter({ children }: ShellRouterProps) {
                 </p>
               </div>
 
-              <Link
-                href="/"
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-              >
-                Dashboard
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                >
+                  Dashboard
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                >
+                  <LogOut size={14} />
+                  {signingOut ? "Signing out..." : "Sign out"}
+                </button>
+              </div>
             </div>
           </header>
 
@@ -199,6 +232,14 @@ export default function ShellRouter({ children }: ShellRouterProps) {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
+            <Link
+              href="/agents/register"
+              className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-2 text-sm font-bold text-amber-300 transition hover:bg-amber-400/20"
+            >
+              <UserPlus size={16} />
+              B2B Agent Register
+            </Link>
+
             {tenant.modules.agentLogin ? (
               <Link
                 href="/login"
@@ -245,6 +286,15 @@ export default function ShellRouter({ children }: ShellRouterProps) {
                   </Link>
                 );
               })}
+
+              <Link
+                href="/agents/register"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-300"
+              >
+                <UserPlus size={16} />
+                B2B Agent Register
+              </Link>
 
               {tenant.modules.agentLogin ? (
                 <Link

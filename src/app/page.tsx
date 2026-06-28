@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   CalendarDays,
@@ -8,6 +9,7 @@ import {
   Wallet,
   LineChart,
   Route,
+  UserPlus,
 } from "lucide-react";
 
 type RevenuePoint = {
@@ -83,6 +85,23 @@ export default function HomePage() {
             Track bookings, revenue, ledger exposure and top routes across the
             portal from one premium control center.
           </p>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/agents/register"
+              className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-400/20 transition hover:bg-amber-300"
+            >
+              <UserPlus className="h-4 w-4" />
+              B2B Agent Register
+            </Link>
+
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+            >
+              Agent Login
+            </Link>
+          </div>
         </section>
 
         <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

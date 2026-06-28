@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   BarChart3,
@@ -14,14 +14,15 @@ import {
   Settings,
   Globe,
   ShieldCheck,
-  Layers3,
   ChevronDown,
   MapPin,
   Bell,
   Bot,
+  LogOut,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ComponentType } from "react";
+import { supabaseClient } from "@/lib/supabaseClient";
 
 type MenuItem = {
   label: string;
@@ -229,6 +230,13 @@ function isPathActive(pathname: string, href: string) {
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await supabaseClient.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   const defaultOpen = useMemo(() => {
     const map: Record<string, boolean> = {};
@@ -346,20 +354,14 @@ export default function AppSidebar() {
         </nav>
 
         <div className="border-t border-slate-200 p-4">
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <div className="flex items-start gap-3">
-              <Layers3 className="mt-0.5 h-4 w-4 text-slate-500" />
-              <div>
-                <p className="text-sm font-semibold text-slate-800">
-                  Scalable Sidebar
-                </p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">
-                  Current modules are future modules done ke liye ready
-                  structure.
-                </p>
-              </div>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
         </div>
       </div>
     </aside>
