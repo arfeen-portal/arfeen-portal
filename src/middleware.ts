@@ -48,7 +48,7 @@ const ROLE_RULES: { prefixes: string[]; roles: Role[] }[] = [
     roles: ["super_admin", "admin", "accountant"],
   },
   {
-    prefixes: ["/operations", "/api/operations"],
+    prefixes: ["/operations", "/oprations", "/api/operations"],
     roles: ["super_admin", "admin", "operations"],
   },
   {
@@ -107,12 +107,19 @@ export async function middleware(req: NextRequest) {
     });
   }
 
+  const rule = matchedRule(pathname);
+
   /**
    * WHITE-LABEL SECURITY RULE
-   * Client domain par backend/sidebar routes open nahi honge.
-   * Localhost par complete original/master portal allowed rahega.
+   * Client domain par unauthenticated backend routes open nahi honge.
+   * Auth-protected ROLE_RULES paths (e.g. /admin, /accounts) fall through
+   * to session/role checks below instead of redirecting to public homepage.
    */
-  if (!masterDomain && startsWithPrefix(pathname, CLIENT_BLOCKED_PREFIXES)) {
+  if (
+    !masterDomain &&
+    startsWithPrefix(pathname, CLIENT_BLOCKED_PREFIXES) &&
+    !rule
+  ) {
     if (isApi) {
       return apiResponse("This backend route is not available on client domain.", 403);
     }
@@ -126,8 +133,6 @@ export async function middleware(req: NextRequest) {
   if (isPublicPath(pathname)) {
     return res;
   }
-
-  const rule = matchedRule(pathname);
 
   if (!rule) {
     return res;

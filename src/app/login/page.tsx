@@ -50,7 +50,7 @@ function getRedirectPath(role: UserRole, nextPath: string | null) {
       return "/accounts";
 
     case "operations":
-      return "/operations";
+      return "/oprations/live-control";
 
     case "agent":
       return "/agent/dashboard";
