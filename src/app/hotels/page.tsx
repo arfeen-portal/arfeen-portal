@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { BedDouble, FileText, Hotel, Search } from 'lucide-react';
+import { BedDouble, Hotel, Search } from 'lucide-react';
+import HotelMyRequestsCta from '@/components/hotels/HotelMyRequestsCta';
 
 export default function HotelsLandingPage() {
   return (
@@ -150,13 +151,6 @@ export default function HotelsLandingPage() {
               cta: "Submit Request",
               icon: Hotel,
             },
-            {
-              title: "My Requests & Quotations",
-              text: "Track your submitted hotel requests, quotations, confirmations, and HCN status.",
-              href: "/hotels/offline-demands",
-              cta: "View My Requests",
-              icon: FileText,
-            },
           ].map((card) => {
             const Icon = card.icon;
             return (
@@ -177,6 +171,8 @@ export default function HotelsLandingPage() {
               </Link>
             );
           })}
+
+          <HotelMyRequestsCta />
         </section>
 
         <section id="search" className="sr-only">

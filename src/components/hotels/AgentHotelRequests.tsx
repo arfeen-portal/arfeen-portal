@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { BedDouble, FileText, Hotel, LogIn, Plus, RefreshCw } from "lucide-react";
+import { BedDouble, FileText, Hotel, Plus, RefreshCw } from "lucide-react";
 
 type Demand = {
   id: string;
@@ -106,32 +106,13 @@ export default function AgentHotelRequests({
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </button>
-            ) : (
-              <Link
-                href="/login?next=/hotels/offline-demands"
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
-              >
-                <LogIn className="h-4 w-4" />
-                Login to View Requests
-              </Link>
-            )}
-
-            {isAgent ? (
-              <Link
-                href="/agent/hotels"
-                className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-5 py-2.5 text-sm font-semibold text-emerald-200 hover:bg-emerald-400/20"
-              >
-                <BedDouble className="h-4 w-4" />
-                Agent Hotel Workspace
-              </Link>
             ) : null}
           </div>
         </section>
 
         {!isAuthenticated ? (
           <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
-            Sign in as an agent to view your submitted requests and quotations.
-            You can still submit a new offline hotel request without logging in.
+            Sign in to view your submitted hotel requests and quotations.
           </section>
         ) : null}
 

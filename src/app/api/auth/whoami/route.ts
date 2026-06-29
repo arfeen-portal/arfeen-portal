@@ -5,7 +5,6 @@ import { createServerClient } from "@supabase/ssr";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // Next 16: cookies() may be async; keep it awaited (safe across channels)
   const store = await cookies();
 
   const supabase = createServerClient(
@@ -16,21 +15,42 @@ export async function GET() {
         get(name: string) {
           return store.get(name)?.value;
         },
-        // Use `any` to avoid type friction between Next and SSR cookie options
-        set(name: string, value: string, options: any) {
-          store.set({ name, value, ...options } as any);
+        set(name: string, value: string, options: Record<string, unknown>) {
+          store.set({ name, value, ...options });
         },
-        remove(name: string, options: any) {
-          store.set({ name, value: "", ...options, maxAge: 0 } as any);
+        remove(name: string, options: Record<string, unknown>) {
+          store.set({ name, value: "", ...options, maxAge: 0 });
         },
       },
     }
   );
 
   const { data, error } = await supabase.auth.getUser();
+  const user = data?.user ?? null;
+
+  let profile: {
+    role: string | null;
+    name: string | null;
+    full_name: string | null;
+  } | null = null;
+
+  if (user?.email) {
+    const { data: profileRow } = await supabase
+      .from("users")
+      .select("role, name, full_name")
+      .eq("email", user.email.toLowerCase())
+      .maybeSingle<{
+        role: string | null;
+        name: string | null;
+        full_name: string | null;
+      }>();
+
+    profile = profileRow ?? null;
+  }
 
   return NextResponse.json({
-    user: data?.user ?? null,
+    user,
+    profile,
     error: error?.message ?? null,
   });
 }

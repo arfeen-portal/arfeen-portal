@@ -55,7 +55,11 @@ function isLoginPath(pathname: string) {
 }
 
 function isStandalonePath(pathname: string) {
-  return isLoginPath(pathname) || pathname === "/agents/register";
+  return (
+    isLoginPath(pathname) ||
+    pathname === "/agents/register" ||
+    pathname === "/hotels/offline-demands/new"
+  );
 }
 
 function isMasterHost(host: string | null) {

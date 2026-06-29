@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BedDouble, CalendarDays, Hotel, Loader2, Save } from "lucide-react";
 import Link from "next/link";
+import { getPostSubmitHotelHref } from "@/lib/hotels/audience";
 
 const initialForm = {
   agent_name: "",
@@ -21,11 +22,55 @@ const initialForm = {
   notes: "",
 };
 
+type SessionProfile = {
+  role: string | null;
+  name: string | null;
+  full_name: string | null;
+};
+
 export default function NewOfflineHotelDemandPage() {
   const router = useRouter();
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [agentNameLocked, setAgentNameLocked] = useState(false);
+  const [sessionRole, setSessionRole] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSession() {
+      try {
+        const res = await fetch("/api/auth/whoami", { cache: "no-store" });
+        const json = await res.json();
+        if (!mounted) return;
+
+        const user = json?.user;
+        const profile = (json?.profile || null) as SessionProfile | null;
+        const authenticated = Boolean(user?.email);
+
+        setIsAuthenticated(authenticated);
+        setSessionRole(profile?.role || null);
+
+        const knownAgentName =
+          profile?.full_name || profile?.name || user?.user_metadata?.full_name || "";
+
+        if (knownAgentName) {
+          setForm((prev) => ({ ...prev, agent_name: knownAgentName }));
+          setAgentNameLocked(true);
+        }
+      } catch {
+        // Public visitors can still submit manually.
+      }
+    }
+
+    void loadSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function updateField(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -48,24 +93,25 @@ export default function NewOfflineHotelDemandPage() {
         throw new Error(json.error || "Failed to create hotel demand");
       }
 
-      router.push("/hotels/offline-demands");
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+      const redirectHref = getPostSubmitHotelHref(sessionRole, isAuthenticated);
+      router.push(redirectHref);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
+    <main className="min-h-screen bg-slate-50 p-6 text-slate-900">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex items-center justify-between">
           <Link
-            href="/hotels/offline-demands"
+            href="/hotels"
             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
+            Back to Hotels
           </Link>
         </div>
 
@@ -83,19 +129,31 @@ export default function NewOfflineHotelDemandPage() {
           </div>
         </section>
 
-        {error && (
+        {error ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">
             {error}
           </div>
-        )}
+        ) : null}
 
         <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-black text-slate-950">Demand Details</h2>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-900 shadow-sm">
+            <h2 className="mb-5 text-xl font-black text-slate-950">Request Details</h2>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <Input label="Agent Name" value={form.agent_name} onChange={(v) => updateField("agent_name", v)} />
-              <Input label="Guest Name" required value={form.guest_name} onChange={(v) => updateField("guest_name", v)} />
+              <Input
+                label={agentNameLocked ? "Agent Name" : "Requester / Agent Name"}
+                value={form.agent_name}
+                onChange={(v) => updateField("agent_name", v)}
+                readOnly={agentNameLocked}
+                placeholder="Your agency or contact name"
+              />
+              <Input
+                label="Guest Name"
+                required
+                value={form.guest_name}
+                onChange={(v) => updateField("guest_name", v)}
+                placeholder="Guest full name"
+              />
 
               <Select
                 label="City"
@@ -104,7 +162,13 @@ export default function NewOfflineHotelDemandPage() {
                 options={["Makkah", "Madinah", "Jeddah", "Taif"]}
               />
 
-              <Input label="Hotel" required value={form.hotel} onChange={(v) => updateField("hotel", v)} />
+              <Input
+                label="Hotel"
+                required
+                value={form.hotel}
+                onChange={(v) => updateField("hotel", v)}
+                placeholder="Preferred hotel"
+              />
 
               <Input
                 label="Check-in"
@@ -136,9 +200,28 @@ export default function NewOfflineHotelDemandPage() {
                 options={["RO", "BB", "HB", "FB"]}
               />
 
-              <Input label="Rooms" type="number" value={form.rooms} onChange={(v) => updateField("rooms", v)} />
-              <Input label="Pax" type="number" value={form.pax} onChange={(v) => updateField("pax", v)} />
-              <Input label="Budget SAR" type="number" value={form.budget} onChange={(v) => updateField("budget", v)} />
+              <Input
+                label="Rooms"
+                type="number"
+                min="1"
+                value={form.rooms}
+                onChange={(v) => updateField("rooms", v)}
+              />
+              <Input
+                label="Pax"
+                type="number"
+                min="1"
+                value={form.pax}
+                onChange={(v) => updateField("pax", v)}
+              />
+              <Input
+                label="Budget SAR"
+                type="number"
+                min="0"
+                value={form.budget}
+                onChange={(v) => updateField("budget", v)}
+                placeholder="Optional"
+              />
 
               <Select
                 label="Urgency"
@@ -153,20 +236,21 @@ export default function NewOfflineHotelDemandPage() {
                   value={form.notes}
                   onChange={(e) => updateField("notes", e.target.value)}
                   rows={5}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:bg-white"
-                  placeholder="Special request, supplier preference, guest requirement..."
+                  placeholder="Special request, view preference, guest requirement..."
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500"
                 />
               </div>
             </div>
 
             <div className="mt-6 flex justify-end">
               <button
+                type="button"
                 onClick={submitDemand}
                 disabled={saving || !form.guest_name || !form.hotel || !form.check_in || !form.check_out}
                 className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-black text-white shadow-lg hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Create Demand
+                Submit Request
               </button>
             </div>
           </div>
@@ -189,7 +273,7 @@ export default function NewOfflineHotelDemandPage() {
                 text: "Operations reviews your request and sends a quotation or confirmation update.",
               },
             ].map((item) => (
-              <div key={item.title} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div key={item.title} className="rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm">
                 <div className="mb-4 inline-flex rounded-2xl bg-amber-50 p-3">
                   <item.icon className="h-5 w-5 text-amber-700" />
                 </div>
@@ -210,23 +294,34 @@ function Input({
   onChange,
   type = "text",
   required = false,
+  readOnly = false,
+  placeholder,
+  min,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
   required?: boolean;
+  readOnly?: boolean;
+  placeholder?: string;
+  min?: string;
 }) {
   return (
     <div>
       <label className="mb-2 block text-sm font-bold text-slate-700">
-        {label} {required && <span className="text-rose-500">*</span>}
+        {label} {required ? <span className="text-rose-500">*</span> : null}
       </label>
       <input
         type={type}
         value={value}
+        min={min}
+        readOnly={readOnly}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:bg-white"
+        className={`w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 ${
+          readOnly ? "cursor-not-allowed bg-slate-100" : "bg-white"
+        }`}
       />
     </div>
   );
@@ -249,7 +344,7 @@ function Select({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:bg-white"
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-indigo-500"
       >
         {options.map((option) => (
           <option key={option} value={option}>
