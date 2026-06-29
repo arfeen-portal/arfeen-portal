@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, BedDouble, CalendarDays, Hotel, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 import { getPostSubmitHotelHref } from "@/lib/hotels/audience";
+import {
+  ROOM_TYPE_OPTIONS,
+  validateHotelDemandInput,
+  validateRoomCapacity,
+  validateStayDates,
+} from "@/lib/hotels/rfqValidation";
 
 const initialForm = {
   agent_name: "",
@@ -33,6 +39,7 @@ export default function NewOfflineHotelDemandPage() {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [agentNameLocked, setAgentNameLocked] = useState(false);
   const [sessionRole, setSessionRole] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -73,12 +80,72 @@ export default function NewOfflineHotelDemandPage() {
   }, []);
 
   function updateField(key: string, value: string) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      return next;
+    });
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      if (key === "check_in" || key === "check_out") {
+        delete next.check_in;
+        delete next.check_out;
+      }
+      if (key === "rooms" || key === "pax" || key === "room_type") {
+        delete next.capacity;
+      }
+      return next;
+    });
+  }
+
+  function validateForm() {
+    const errors: Record<string, string> = {};
+    const dateResult = validateStayDates(form.check_in, form.check_out);
+
+    if (!dateResult.ok) {
+      if (dateResult.error.includes("Check-in")) {
+        errors.check_in = dateResult.error;
+      } else {
+        errors.check_out = dateResult.error;
+      }
+    }
+
+    const roomResult = validateRoomCapacity(
+      form.room_type,
+      Number(form.rooms) || 1,
+      Number(form.pax) || 1
+    );
+
+    if (!roomResult.ok) {
+      errors.capacity = roomResult.error;
+    }
+
+    const full = validateHotelDemandInput({
+      guest_name: form.guest_name,
+      hotel: form.hotel,
+      check_in: form.check_in,
+      check_out: form.check_out,
+      room_type: form.room_type,
+      rooms: Number(form.rooms) || 1,
+      pax: Number(form.pax) || 1,
+    });
+
+    if (!full.ok && !errors.check_in && !errors.check_out && !errors.capacity) {
+      errors.form = full.error;
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   }
 
   async function submitDemand() {
     setSaving(true);
     setError("");
+
+    if (!validateForm()) {
+      setSaving(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/hotel-demands", {
@@ -129,9 +196,9 @@ export default function NewOfflineHotelDemandPage() {
           </div>
         </section>
 
-        {error ? (
+        {error || fieldErrors.form ? (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">
-            {error}
+            {error || fieldErrors.form}
           </div>
         ) : null}
 
@@ -176,6 +243,7 @@ export default function NewOfflineHotelDemandPage() {
                 required
                 value={form.check_in}
                 onChange={(v) => updateField("check_in", v)}
+                error={fieldErrors.check_in}
               />
 
               <Input
@@ -184,13 +252,14 @@ export default function NewOfflineHotelDemandPage() {
                 required
                 value={form.check_out}
                 onChange={(v) => updateField("check_out", v)}
+                error={fieldErrors.check_out}
               />
 
               <Select
-                label="Room Type"
+                label="Room Type / Unit Type"
                 value={form.room_type}
                 onChange={(v) => updateField("room_type", v)}
-                options={["Sharing", "Quad", "Triple", "Double", "Single", "Suite"]}
+                options={[...ROOM_TYPE_OPTIONS]}
               />
 
               <Select
@@ -213,6 +282,7 @@ export default function NewOfflineHotelDemandPage() {
                 min="1"
                 value={form.pax}
                 onChange={(v) => updateField("pax", v)}
+                error={fieldErrors.capacity}
               />
               <Input
                 label="Budget SAR"
@@ -297,6 +367,7 @@ function Input({
   readOnly = false,
   placeholder,
   min,
+  error,
 }: {
   label: string;
   value: string;
@@ -306,6 +377,7 @@ function Input({
   readOnly?: boolean;
   placeholder?: string;
   min?: string;
+  error?: string;
 }) {
   return (
     <div>
@@ -319,10 +391,11 @@ function Input({
         readOnly={readOnly}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 ${
+        className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 ${
           readOnly ? "cursor-not-allowed bg-slate-100" : "bg-white"
-        }`}
+        } ${error ? "border-rose-400" : "border-slate-200"}`}
       />
+      {error ? <p className="mt-1 text-xs font-semibold text-rose-600">{error}</p> : null}
     </div>
   );
 }

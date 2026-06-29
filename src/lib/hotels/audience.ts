@@ -27,5 +27,13 @@ export function getPostSubmitHotelHref(
     return "/login?next=/hotels/offline-demands";
   }
 
-  return getHotelRequestsHref(role, true);
+  if (role && HOTEL_OPS_ROLES.has(role)) {
+    return "/admin/hotels/offline-demands";
+  }
+
+  if (role === "agent") {
+    return "/agent/hotels";
+  }
+
+  return "/login?next=/hotels/offline-demands";
 }

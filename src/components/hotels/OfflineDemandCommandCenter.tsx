@@ -1,22 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   Bell,
   Bot,
   CheckCircle2,
   Clock,
+  Eye,
   FileText,
   Hotel,
-  MessageCircle,
   Plus,
   RefreshCw,
   Search,
   ShieldAlert,
   Sparkles,
+  X,
 } from "lucide-react";
+import { formatStayDates } from "@/lib/hotels/rfqValidation";
 
 type Demand = {
   id: string;
@@ -33,17 +35,28 @@ type Demand = {
   meal_plan: string | null;
   budget: number;
   urgency: string;
+  notes: string | null;
   status: string;
+  quote_status: string | null;
   duplicate_score: number;
   expected_market_price: number;
   risk_level: string;
   crowd_pressure: string;
   hcn: string | null;
   hcn_status: string;
+  hcn_reference: string | null;
   final_selling_rate: number;
+  final_offer_sar: number | null;
   supplier_rate: number;
   profit_amount: number;
+  public_note: string | null;
+  quoted_supplier: string | null;
+  quoted_room_type: string | null;
+  quoted_meal_plan: string | null;
+  last_reminder_at: string | null;
 };
+
+type ModalKind = "view" | "quote" | "hcn" | "reminder" | null;
 
 const statusBadge: Record<string, string> = {
   new: "bg-slate-100 text-slate-700",
@@ -57,6 +70,26 @@ type OfflineDemandCommandCenterProps = {
   newDemandHref?: string;
 };
 
+function StayDatesCell({
+  checkIn,
+  checkOut,
+  nights,
+}: {
+  checkIn: string;
+  checkOut: string;
+  nights?: number | null;
+}) {
+  const formatted = formatStayDates(checkIn, checkOut, nights);
+
+  return (
+    <div className="text-xs leading-5 text-slate-700">
+      {formatted.lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
+    </div>
+  );
+}
+
 export default function OfflineDemandCommandCenter({
   newDemandHref = "/hotels/offline-demands/new",
 }: OfflineDemandCommandCenterProps) {
@@ -64,6 +97,24 @@ export default function OfflineDemandCommandCenter({
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
+  const [activeDemand, setActiveDemand] = useState<Demand | null>(null);
+  const [modal, setModal] = useState<ModalKind>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const [quoteForm, setQuoteForm] = useState({
+    quoted_supplier: "",
+    quoted_room_type: "",
+    quoted_meal_plan: "",
+    quoted_sar: "",
+    selling_sar: "",
+    public_note: "",
+  });
+
+  const [hcnForm, setHcnForm] = useState({
+    hcn_status: "pending",
+    hcn_reference: "",
+  });
 
   async function loadData() {
     setLoading(true);
@@ -107,6 +158,83 @@ export default function OfflineDemandCommandCenter({
     };
   }, [data]);
 
+  function openModal(kind: ModalKind, demand: Demand) {
+    setActiveDemand(demand);
+    setModal(kind);
+    setToast("");
+
+    if (kind === "quote") {
+      setQuoteForm({
+        quoted_supplier: demand.quoted_supplier || demand.hotel || "",
+        quoted_room_type: demand.quoted_room_type || demand.room_type || "",
+        quoted_meal_plan: demand.quoted_meal_plan || demand.meal_plan || "BB",
+        quoted_sar: demand.supplier_rate ? String(demand.supplier_rate) : "",
+        selling_sar: String(demand.final_offer_sar ?? demand.final_selling_rate ?? ""),
+        public_note: demand.public_note || "",
+      });
+    }
+
+    if (kind === "hcn") {
+      setHcnForm({
+        hcn_status: demand.hcn_status || "pending",
+        hcn_reference: demand.hcn_reference || demand.hcn || "",
+      });
+    }
+  }
+
+  function closeModal() {
+    setModal(null);
+    setActiveDemand(null);
+    setActionLoading(false);
+  }
+
+  async function patchDemand(payload: Record<string, unknown>) {
+    if (!activeDemand) return;
+
+    setActionLoading(true);
+    setToast("");
+
+    try {
+      const res = await fetch(`/api/hotel-demands/${activeDemand.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || "Update failed");
+      }
+
+      await loadData();
+      closeModal();
+      setToast("Update saved successfully.");
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function submitQuote() {
+    await patchDemand({
+      action: "send_quote",
+      ...quoteForm,
+    });
+  }
+
+  async function submitHcn() {
+    await patchDemand({
+      action: "update_hcn",
+      ...hcnForm,
+    });
+  }
+
+  async function logReminder() {
+    await patchDemand({ action: "log_reminder" });
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -121,14 +249,14 @@ export default function OfflineDemandCommandCenter({
                 AI Hotel RFQ, Supplier Routing & HCN Tracker
               </h1>
               <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
-                Agent demand submit kare, system duplicate detect kare, WhatsApp RFQ route kare,
-                supplier replies parse kare, profit apply kare, booking confirm kare, voucher generate kare
-                aur HCN reminders auto track kare.
+                Operations dashboard for RFQ routing, supplier quotes, profit engine,
+                confirmations, vouchers, and HCN tracking.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
               <button
+                type="button"
                 onClick={loadData}
                 className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-5 py-3 text-sm font-semibold text-white ring-1 ring-white/20 hover:bg-white/20"
               >
@@ -149,6 +277,12 @@ export default function OfflineDemandCommandCenter({
         {error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
+          </div>
+        ) : null}
+
+        {toast ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {toast}
           </div>
         ) : null}
 
@@ -256,10 +390,11 @@ export default function OfflineDemandCommandCenter({
                         <p className="text-xs text-slate-500">{item.city}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-medium text-slate-800">{item.check_in}</p>
-                        <p className="text-xs text-slate-500">
-                          {item.check_out} · {item.nights} nights
-                        </p>
+                        <StayDatesCell
+                          checkIn={item.check_in}
+                          checkOut={item.check_out}
+                          nights={item.nights}
+                        />
                       </td>
                       <td className="px-5 py-4">
                         <p className="font-medium text-slate-800">{item.room_type}</p>
@@ -270,6 +405,11 @@ export default function OfflineDemandCommandCenter({
                       <td className="px-5 py-4">
                         <p className="font-black text-slate-950">{item.expected_market_price} SAR</p>
                         <p className="text-xs text-slate-500">Expected market</p>
+                        {item.final_offer_sar || item.final_selling_rate ? (
+                          <p className="mt-1 text-xs font-semibold text-indigo-700">
+                            Offer: {item.final_offer_sar ?? item.final_selling_rate} SAR
+                          </p>
+                        ) : null}
                       </td>
                       <td className="px-5 py-4">
                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
@@ -278,7 +418,9 @@ export default function OfflineDemandCommandCenter({
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-bold text-slate-800">{item.hcn || "Pending"}</p>
+                        <p className="font-bold text-slate-800">
+                          {item.hcn_reference || item.hcn || "Pending"}
+                        </p>
                         <p className="text-xs text-slate-500">{item.hcn_status}</p>
                       </td>
                       <td className="px-5 py-4">
@@ -289,18 +431,36 @@ export default function OfflineDemandCommandCenter({
                         >
                           {item.status}
                         </span>
+                        {item.quote_status ? (
+                          <p className="mt-1 text-xs text-slate-500">{item.quote_status}</p>
+                        ) : null}
                       </td>
                       <td className="px-5 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button className="rounded-xl border border-slate-200 p-2 hover:bg-white">
-                            <MessageCircle className="h-4 w-4 text-slate-600" />
-                          </button>
-                          <button className="rounded-xl border border-slate-200 p-2 hover:bg-white">
+                          <ActionButton
+                            title="View details"
+                            onClick={() => openModal("view", item)}
+                          >
+                            <Eye className="h-4 w-4 text-slate-600" />
+                          </ActionButton>
+                          <ActionButton
+                            title="Add / send quote"
+                            onClick={() => openModal("quote", item)}
+                          >
                             <FileText className="h-4 w-4 text-slate-600" />
-                          </button>
-                          <button className="rounded-xl border border-slate-200 p-2 hover:bg-white">
+                          </ActionButton>
+                          <ActionButton
+                            title="Update HCN status"
+                            onClick={() => openModal("hcn", item)}
+                          >
+                            <CheckCircle2 className="h-4 w-4 text-slate-600" />
+                          </ActionButton>
+                          <ActionButton
+                            title="Log reminder"
+                            onClick={() => openModal("reminder", item)}
+                          >
                             <Clock className="h-4 w-4 text-slate-600" />
-                          </button>
+                          </ActionButton>
                         </div>
                       </td>
                     </tr>
@@ -311,6 +471,246 @@ export default function OfflineDemandCommandCenter({
           </div>
         </section>
       </div>
+
+      {modal && activeDemand ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <h3 className="text-lg font-black text-slate-950">
+                {modal === "view" && "Demand Details"}
+                {modal === "quote" && "Add / Send Quote"}
+                {modal === "hcn" && "HCN Status"}
+                {modal === "reminder" && "Log Reminder"}
+              </h3>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-xl border border-slate-200 p-2 hover:bg-slate-50"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-6">
+              {modal === "view" ? (
+                <ViewDemandDetails demand={activeDemand} />
+              ) : null}
+
+              {modal === "quote" ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <ModalField
+                    label="Supplier / Hotel Name"
+                    value={quoteForm.quoted_supplier}
+                    onChange={(v) => setQuoteForm((p) => ({ ...p, quoted_supplier: v }))}
+                  />
+                  <ModalField
+                    label="Room Type"
+                    value={quoteForm.quoted_room_type}
+                    onChange={(v) => setQuoteForm((p) => ({ ...p, quoted_room_type: v }))}
+                  />
+                  <ModalField
+                    label="Meal Plan"
+                    value={quoteForm.quoted_meal_plan}
+                    onChange={(v) => setQuoteForm((p) => ({ ...p, quoted_meal_plan: v }))}
+                  />
+                  <ModalField
+                    label="Quoted SAR (supplier)"
+                    type="number"
+                    value={quoteForm.quoted_sar}
+                    onChange={(v) => setQuoteForm((p) => ({ ...p, quoted_sar: v }))}
+                  />
+                  <ModalField
+                    label="Selling SAR / Final Offer"
+                    type="number"
+                    value={quoteForm.selling_sar}
+                    onChange={(v) => setQuoteForm((p) => ({ ...p, selling_sar: v }))}
+                  />
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-sm font-bold text-slate-700">
+                      Notes to agent (public)
+                    </label>
+                    <textarea
+                      value={quoteForm.public_note}
+                      onChange={(e) =>
+                        setQuoteForm((p) => ({ ...p, public_note: e.target.value }))
+                      }
+                      rows={4}
+                      className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {modal === "hcn" ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-bold text-slate-700">HCN Status</label>
+                    <select
+                      value={hcnForm.hcn_status}
+                      onChange={(e) =>
+                        setHcnForm((p) => ({ ...p, hcn_status: e.target.value }))
+                      }
+                      className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-indigo-500"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="received">Received</option>
+                      <option value="not_required">Not required</option>
+                    </select>
+                  </div>
+                  {hcnForm.hcn_status === "received" ? (
+                    <ModalField
+                      label="HCN / Reference"
+                      value={hcnForm.hcn_reference}
+                      onChange={(v) => setHcnForm((p) => ({ ...p, hcn_reference: v }))}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+
+              {modal === "reminder" ? (
+                <div className="space-y-3 text-sm text-slate-600">
+                  <p>
+                    Log a reminder for <strong>{activeDemand.guest_name}</strong> at{" "}
+                    <strong>{activeDemand.hotel}</strong>.
+                  </p>
+                  {activeDemand.last_reminder_at ? (
+                    <p className="rounded-2xl bg-slate-50 px-4 py-3">
+                      Last reminder: {new Date(activeDemand.last_reminder_at).toLocaleString()}
+                    </p>
+                  ) : (
+                    <p className="rounded-2xl bg-slate-50 px-4 py-3">No reminder logged yet.</p>
+                  )}
+                  <p className="text-xs text-slate-500">
+                    WhatsApp automation is not connected yet. Saving will record the reminder timestamp.
+                  </p>
+                </div>
+              ) : null}
+
+              {toast ? (
+                <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{toast}</p>
+              ) : null}
+            </div>
+
+            {modal !== "view" ? (
+              <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-2xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => {
+                    if (modal === "quote") void submitQuote();
+                    if (modal === "hcn") void submitHcn();
+                    if (modal === "reminder") void logReminder();
+                  }}
+                  className="rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 disabled:bg-slate-300"
+                >
+                  {actionLoading ? "Saving..." : modal === "reminder" ? "Log Reminder" : "Save"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-2xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </main>
+  );
+}
+
+function ActionButton({
+  title,
+  onClick,
+  children,
+}: {
+  title: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className="rounded-xl border border-slate-200 p-2 hover:bg-white"
+    >
+      {children}
+    </button>
+  );
+}
+
+function ModalField({
+  label,
+  value,
+  onChange,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-bold text-slate-700">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-indigo-500"
+      />
+    </div>
+  );
+}
+
+function ViewDemandDetails({ demand }: { demand: Demand }) {
+  const dates = formatStayDates(demand.check_in, demand.check_out, demand.nights);
+
+  return (
+    <div className="grid gap-4 text-sm md:grid-cols-2">
+      <Detail label="Guest" value={demand.guest_name} />
+      <Detail label="Agent" value={demand.agent_name || "—"} />
+      <Detail label="Hotel" value={`${demand.hotel} (${demand.city})`} />
+      <Detail label="Room" value={`${demand.room_type} · ${demand.rooms} rooms · ${demand.pax} pax`} />
+      <Detail label="Meal Plan" value={demand.meal_plan || "RO"} />
+      <Detail label="Urgency" value={demand.urgency} />
+      <Detail label="Stay" value={dates.lines.join(" · ")} />
+      <Detail label="Status" value={`${demand.status} / ${demand.quote_status || "—"}`} />
+      <Detail label="AI Expected Market" value={`${demand.expected_market_price} SAR`} />
+      <Detail label="Supplier Rate" value={`${demand.supplier_rate || "—"} SAR`} />
+      <Detail label="Final Offer" value={`${demand.final_offer_sar ?? demand.final_selling_rate ?? "—"} SAR`} />
+      <Detail label="Profit" value={`${demand.profit_amount || "—"} SAR`} />
+      <Detail label="Risk" value={demand.risk_level} />
+      <Detail label="Duplicate Score" value={String(demand.duplicate_score ?? 0)} />
+      <Detail label="HCN" value={`${demand.hcn_reference || demand.hcn || "Pending"} (${demand.hcn_status})`} />
+      <Detail label="Public Note" value={demand.public_note || "—"} />
+      <div className="md:col-span-2">
+        <Detail label="Request Notes" value={demand.notes || "—"} />
+      </div>
+    </div>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 px-4 py-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 font-semibold text-slate-900">{value}</p>
+    </div>
   );
 }

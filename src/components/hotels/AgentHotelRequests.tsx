@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BedDouble, FileText, Hotel, Plus, RefreshCw } from "lucide-react";
+import { formatStayDates, getAgentQuotationLabel } from "@/lib/hotels/rfqValidation";
 
 type Demand = {
   id: string;
@@ -14,8 +15,11 @@ type Demand = {
   nights: number;
   room_type: string;
   status: string;
-  final_selling_rate: number;
-  expected_market_price: number;
+  quote_status?: string | null;
+  final_offer_sar?: number | null;
+  final_selling_rate?: number | null;
+  public_note?: string | null;
+  hcn_reference?: string | null;
   hcn: string | null;
   hcn_status: string;
 };
@@ -32,6 +36,26 @@ type AgentHotelRequestsProps = {
   isAuthenticated: boolean;
   isAgent: boolean;
 };
+
+function StayDatesCell({
+  checkIn,
+  checkOut,
+  nights,
+}: {
+  checkIn: string;
+  checkOut: string;
+  nights?: number | null;
+}) {
+  const formatted = formatStayDates(checkIn, checkOut, nights);
+
+  return (
+    <div className="text-xs leading-5 text-slate-300">
+      {formatted.lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
+    </div>
+  );
+}
 
 export default function AgentHotelRequests({
   isAuthenticated,
@@ -171,39 +195,48 @@ export default function AgentHotelRequests({
                         </td>
                       </tr>
                     ) : (
-                      data.map((item) => (
-                        <tr key={item.id}>
-                          <td className="px-5 py-4 font-medium text-white">
-                            {item.guest_name}
-                          </td>
-                          <td className="px-5 py-4">
-                            <p className="font-medium text-slate-100">{item.hotel}</p>
-                            <p className="text-xs text-slate-400">{item.city}</p>
-                          </td>
-                          <td className="px-5 py-4 text-slate-300">
-                            {item.check_in} → {item.check_out}
-                            <p className="text-xs text-slate-500">{item.nights} nights</p>
-                          </td>
-                          <td className="px-5 py-4 text-slate-200">
-                            {item.final_selling_rate || item.expected_market_price
-                              ? `${item.final_selling_rate || item.expected_market_price} SAR`
-                              : "Pending"}
-                          </td>
-                          <td className="px-5 py-4 text-slate-300">
-                            {item.hcn || "Pending"}
-                            <p className="text-xs text-slate-500">{item.hcn_status}</p>
-                          </td>
-                          <td className="px-5 py-4">
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs font-bold ${
-                                statusBadge[item.status] || "bg-slate-100 text-slate-700"
-                              }`}
-                            >
-                              {item.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
+                      data.map((item) => {
+                        const quotationLabel = getAgentQuotationLabel(item);
+                        const hcnRef = item.hcn_reference || item.hcn;
+
+                        return (
+                          <tr key={item.id}>
+                            <td className="px-5 py-4 font-medium text-white">
+                              {item.guest_name}
+                            </td>
+                            <td className="px-5 py-4">
+                              <p className="font-medium text-slate-100">{item.hotel}</p>
+                              <p className="text-xs text-slate-400">{item.city}</p>
+                            </td>
+                            <td className="px-5 py-4">
+                              <StayDatesCell
+                                checkIn={item.check_in}
+                                checkOut={item.check_out}
+                                nights={item.nights}
+                              />
+                            </td>
+                            <td className="px-5 py-4 text-slate-200">
+                              <p>{quotationLabel}</p>
+                              {item.public_note ? (
+                                <p className="mt-1 text-xs text-slate-400">{item.public_note}</p>
+                              ) : null}
+                            </td>
+                            <td className="px-5 py-4 text-slate-300">
+                              <p>{hcnRef || "Pending"}</p>
+                              <p className="text-xs text-slate-500">{item.hcn_status}</p>
+                            </td>
+                            <td className="px-5 py-4">
+                              <span
+                                className={`rounded-full px-3 py-1 text-xs font-bold ${
+                                  statusBadge[item.status] || "bg-slate-100 text-slate-700"
+                                }`}
+                              >
+                                {item.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

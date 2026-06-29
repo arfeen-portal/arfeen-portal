@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+import { sanitizeDemandsForAgent } from "@/lib/hotels/demandVisibility";
+import { validateHotelDemandInput } from "@/lib/hotels/rfqValidation";
 
 export const dynamic = "force-dynamic";
 
@@ -30,13 +32,6 @@ function toNumber(value: unknown, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function calculateNights(checkIn: string, checkOut: string) {
-  const start = new Date(checkIn);
-  const end = new Date(checkOut);
-  const diff = Math.ceil((end.getTime() - start.getTime()) / 86400000);
-  return diff > 0 ? diff : 1;
-}
-
 function estimateMarketPrice(city: string, hotel: string, roomType: string, urgency: string) {
   let base = 280;
 
@@ -52,7 +47,7 @@ function estimateMarketPrice(city: string, hotel: string, roomType: string, urge
 
 function detectRisk(checkIn: string, urgency: string) {
   const today = new Date();
-  const date = new Date(checkIn);
+  const date = new Date(`${checkIn}T00:00:00Z`);
   const days = Math.ceil((date.getTime() - today.getTime()) / 86400000);
 
   if (days <= 1) return "critical";
@@ -98,7 +93,13 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ data: data ?? [] });
+  const rows = data ?? [];
+
+  if (role === "agent") {
+    return NextResponse.json({ data: sanitizeDemandsForAgent(rows) });
+  }
+
+  return NextResponse.json({ data: rows });
 }
 
 export async function POST(req: NextRequest) {
@@ -109,48 +110,79 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
+  const session = await getSessionContext();
 
-  const nights = calculateNights(body.check_in, body.check_out);
+  const rooms = Math.max(1, toNumber(body.rooms, 1));
+  const pax = Math.max(1, toNumber(body.pax, 1));
+  const roomType = String(body.room_type || "").trim();
+  const checkIn = String(body.check_in || "").trim();
+  const checkOut = String(body.check_out || "").trim();
+
+  const validation = validateHotelDemandInput({
+    guest_name: body.guest_name,
+    hotel: body.hotel,
+    check_in: checkIn,
+    check_out: checkOut,
+    room_type: roomType,
+    rooms,
+    pax,
+  });
+
+  if (!validation.ok) {
+    const message =
+      validation.error.includes("maximum") || validation.error.includes("guest")
+        ? "Requested pax exceeds selected room capacity."
+        : validation.error;
+
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
+  const urgency = String(body.urgency || "normal");
   const expectedMarketPrice = estimateMarketPrice(
-    body.city ?? "",
-    body.hotel ?? "",
-    body.room_type ?? "",
-    body.urgency ?? "normal"
+    String(body.city ?? ""),
+    String(body.hotel ?? ""),
+    roomType,
+    urgency
   );
-
-  const riskLevel = detectRisk(body.check_in, body.urgency ?? "normal");
+  const riskLevel = detectRisk(checkIn, urgency);
 
   const duplicateQuery = await supabase
     .from("hotel_demands")
     .select("id")
     .eq("guest_name", body.guest_name)
     .eq("hotel", body.hotel)
-    .eq("check_in", body.check_in)
+    .eq("check_in", checkIn)
     .limit(1);
 
   const duplicateScore = duplicateQuery.data?.length ? 95 : 0;
 
+  const agentName = String(body.agent_name || session?.profile?.name || "").trim() || null;
+  const agentId =
+    session?.profile?.role === "agent" ? session.user.id : body.agent_id || null;
+
   const insertPayload = {
-    agent_id: body.agent_id || null,
-    agent_name: body.agent_name || null,
-    guest_name: body.guest_name,
-    city: body.city,
-    hotel: body.hotel,
-    check_in: body.check_in,
-    check_out: body.check_out,
-    nights,
-    room_type: body.room_type,
-    rooms: toNumber(body.rooms, 1),
-    pax: toNumber(body.pax, 1),
-    meal_plan: body.meal_plan || "RO",
+    agent_id: agentId,
+    agent_name: agentName,
+    guest_name: String(body.guest_name).trim(),
+    city: String(body.city || "Makkah").trim(),
+    hotel: String(body.hotel).trim(),
+    check_in: checkIn,
+    check_out: checkOut,
+    nights: validation.nights,
+    room_type: roomType,
+    room_capacity: validation.roomCapacity,
+    rooms,
+    pax,
+    meal_plan: String(body.meal_plan || "RO").trim(),
     budget: toNumber(body.budget, 0),
-    urgency: body.urgency || "normal",
-    notes: body.notes || null,
+    urgency,
+    notes: body.notes ? String(body.notes).trim() : null,
     duplicate_score: duplicateScore,
     expected_market_price: expectedMarketPrice,
     risk_level: riskLevel,
     crowd_pressure: riskLevel === "critical" ? "very_high" : riskLevel === "high" ? "high" : "normal",
     status: "rfq_pending",
+    quote_status: "awaiting_supplier",
     hcn_status: "pending",
   };
 
@@ -168,12 +200,11 @@ export async function POST(req: NextRequest) {
     {
       demand_id: data.id,
       action: "DEMAND_CREATED",
-      description: "Offline hotel demand created and AI checks completed.",
-      actor: "system",
+      description: "Offline hotel demand created.",
+      actor: session?.user?.email || "public",
       metadata: {
-        duplicateScore,
-        expectedMarketPrice,
-        riskLevel,
+        nights: validation.nights,
+        roomCapacity: validation.roomCapacity,
       },
     },
   ]);
@@ -205,5 +236,5 @@ export async function POST(req: NextRequest) {
 
   await supabase.from("hotel_supplier_rfq").insert(suppliers);
 
-  return NextResponse.json({ data });
+  return NextResponse.json({ data: sanitizeDemandsForAgent([data])[0] ?? data });
 }
