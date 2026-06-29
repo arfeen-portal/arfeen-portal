@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
@@ -21,7 +21,7 @@ import {
 
 import AppSidebar from "@/components/layout/AppSidebar";
 import { getTenantByHost } from "@/lib/tenantConfig";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { clientLogout } from "@/lib/auth/clientLogout";
 
 type ShellRouterProps = {
   children: ReactNode;
@@ -73,7 +73,6 @@ function isMasterHost(host: string | null) {
 
 export default function ShellRouter({ children }: ShellRouterProps) {
   const pathname = usePathname() || "/";
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -90,10 +89,8 @@ export default function ShellRouter({ children }: ShellRouterProps) {
     if (signingOut) return;
     setSigningOut(true);
     try {
-      await supabaseClient.auth.signOut();
-      router.push("/login");
-      router.refresh();
-    } finally {
+      await clientLogout();
+    } catch {
       setSigningOut(false);
     }
   }

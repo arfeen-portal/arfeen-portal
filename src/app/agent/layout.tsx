@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { usePathname } from "next/navigation";
+import { clientLogout } from "@/lib/auth/clientLogout";
 import {
   BadgeDollarSign,
   BarChart3,
@@ -18,15 +18,6 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-
-const supabase =
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ? createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      )
-    : null;
 
 const nav = [
   {
@@ -82,12 +73,10 @@ export default function AgentLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   async function logout() {
-    await supabase?.auth.signOut();
-    router.push("/login");
+    await clientLogout();
   }
 
   return (

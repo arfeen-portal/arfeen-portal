@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { clientLogout } from "@/lib/auth/clientLogout";
 import { supabaseClient } from '@/lib/supabaseClient';
-
-const supabase = supabaseClient;
 
 import type { User } from "@supabase/supabase-js";
 export default function UserMenu() {
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const supabase = supabaseClient;
 
   useEffect(() => {
     let mounted = true;
@@ -28,8 +26,7 @@ export default function UserMenu() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    await clientLogout();
   };
 
   if (loading) {

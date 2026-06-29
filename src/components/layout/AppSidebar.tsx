@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   BarChart3,
@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ComponentType } from "react";
-import { supabaseClient } from "@/lib/supabaseClient";
+import { clientLogout } from "@/lib/auth/clientLogout";
 
 type MenuItem = {
   label: string;
@@ -128,6 +128,7 @@ const menu: MenuItem[] = [
       { label: "Credit Control", href: "/agents/credit-control" },
       { label: "Statements", href: "/agents/statements" },
       { label: "Register Agent", href: "/agents/register" },
+      { label: "Agent Approvals", href: "/admin/agents" },
       { label: "Rewards", href: "/agents/rewards" },
     ],
   },
@@ -230,12 +231,9 @@ function isPathActive(pathname: string, href: string) {
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
 
   async function handleSignOut() {
-    await supabaseClient.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await clientLogout();
   }
 
   const defaultOpen = useMemo(() => {

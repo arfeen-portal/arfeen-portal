@@ -126,6 +126,35 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const { data: agentRow } = await supabase
+      .from("agents")
+      .select("status, login_enabled")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (agentRow) {
+      const approved =
+        agentRow.status === "approved" || agentRow.status === "active";
+      const loginAllowed = agentRow.login_enabled !== false;
+
+      if (!approved || !loginAllowed) {
+        const message =
+          agentRow.status === "blocked"
+            ? "Your agent account has been blocked. Contact admin."
+            : "Your agent registration is pending admin approval.";
+
+        return NextResponse.json({ ok: false, error: message }, { status: 403 });
+      }
+    } else if (profile.role === "agent") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Agent profile not found or pending admin approval.",
+        },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({ ok: true, user: profile });
   } catch (error: any) {
     return NextResponse.json(
