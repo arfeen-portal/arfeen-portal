@@ -1,7 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
 
 export const dynamic = "force-dynamic";
+
+const OPS_ROLES = new Set(["super_admin", "admin", "operations"]);
+
+async function getSessionContext() {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return null;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.email) return null;
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role, name, email")
+    .eq("email", user.email.toLowerCase())
+    .maybeSingle<{ role: string | null; name: string | null; email: string | null }>();
+
+  return { user, profile };
+}
 
 function toNumber(value: unknown, fallback = 0) {
   const n = Number(value);
@@ -40,17 +62,37 @@ function detectRisk(checkIn: string, urgency: string) {
 }
 
 export async function GET() {
+  const session = await getSessionContext();
+
+  if (!session?.profile?.role) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  const role = session.profile.role;
   const supabase = getSupabaseAdminSafe();
 
   if (!supabase) {
     return NextResponse.json({ error: "Supabase admin client not configured" }, { status: 500 });
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("hotel_demands")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(100);
+
+  if (role === "agent") {
+    const agentName = (session.profile.name || "").trim();
+    if (agentName) {
+      query = query.ilike("agent_name", `%${agentName}%`);
+    } else {
+      query = query.eq("agent_id", session.user.id);
+    }
+  } else if (!OPS_ROLES.has(role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

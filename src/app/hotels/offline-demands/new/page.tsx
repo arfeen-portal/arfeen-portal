@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BedDouble, Bot, CalendarDays, Hotel, Loader2, Save, Sparkles } from "lucide-react";
+import { ArrowLeft, BedDouble, CalendarDays, Hotel, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 
 const initialForm = {
@@ -69,16 +69,16 @@ export default function NewOfflineHotelDemandPage() {
           </Link>
         </div>
 
-        <section className="rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-950 to-slate-900 p-8 text-white shadow-2xl">
+        <section className="rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-8 text-white shadow-2xl">
           <div className="max-w-3xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-indigo-100">
-              <Sparkles className="h-4 w-4" />
-              Agent Hotel Demand
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-amber-100">
+              <Hotel className="h-4 w-4" />
+              Offline Hotel Request
             </div>
-            <h1 className="text-3xl font-black md:text-5xl">Create Offline Hotel RFQ Demand</h1>
+            <h1 className="text-3xl font-black md:text-5xl">Submit Hotel Request</h1>
             <p className="mt-4 text-sm leading-6 text-slate-300 md:text-base">
-              Demand create hoty hi system duplicate check, expected market price, risky date,
-              crowd pressure aur supplier routing prepare karega.
+              Share guest details, preferred hotel, dates, and room requirements.
+              Our operations team will review your request and send a quotation.
             </p>
           </div>
         </section>
@@ -174,29 +174,24 @@ export default function NewOfflineHotelDemandPage() {
           <aside className="space-y-4">
             {[
               {
-                icon: Bot,
-                title: "AI Duplicate Check",
-                text: "Same guest, hotel and check-in demand detect hogi.",
-              },
-              {
                 icon: Hotel,
-                title: "Supplier Routing",
-                text: "City, hotel, response speed and reliability ke basis par RFQ route hoga.",
+                title: "What to include",
+                text: "Preferred hotel, city, dates, room type, pax count, and budget if available.",
               },
               {
                 icon: BedDouble,
-                title: "Market Price Suggestion",
-                text: "System expected SAR market rate suggest karega.",
+                title: "Who can use this",
+                text: "Agents and customers can submit offline hotel requests from the public portal.",
               },
               {
                 icon: CalendarDays,
-                title: "HCN Reminder Flow",
-                text: "3 days, 2 days, 1 day aur arrival day reminders ready rahenge.",
+                title: "What happens next",
+                text: "Operations reviews your request and sends a quotation or confirmation update.",
               },
             ].map((item) => (
               <div key={item.title} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="mb-4 inline-flex rounded-2xl bg-indigo-50 p-3">
-                  <item.icon className="h-5 w-5 text-indigo-700" />
+                <div className="mb-4 inline-flex rounded-2xl bg-amber-50 p-3">
+                  <item.icon className="h-5 w-5 text-amber-700" />
                 </div>
                 <h3 className="font-black text-slate-950">{item.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-500">{item.text}</p>

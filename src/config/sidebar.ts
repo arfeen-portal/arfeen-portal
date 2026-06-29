@@ -60,8 +60,8 @@ export const sidebarItems: SidebarItem[] = [
         icon: NotebookPen,
       },
       {
-        title: "Offline Hotel Demands",
-        href: "/hotels/offline-demands",
+        title: "Hotel RFQ Command Center",
+        href: "/admin/hotels/offline-demands",
         icon: Building2,
       },
       {

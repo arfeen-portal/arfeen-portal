@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import Link from 'next/link';
+import { BedDouble, FileText, Hotel, Search } from 'lucide-react';
 
 export default function HotelsLandingPage() {
   return (
@@ -93,12 +94,12 @@ export default function HotelsLandingPage() {
               type="button"
               className="mt-6 w-full md:w-auto rounded-full bg-amber-400 hover:bg-amber-300 text-slate-900 text-sm font-semibold px-6 py-2.5 transition-colors"
             >
-              Search Hotels (Demo)
+              Search Hotels (Coming Soon)
             </button>
 
             <p className="mt-3 text-[11px] text-slate-400">
-              * Live inventory &amp; instant booking will connect to supplier APIs later.
-              For now this page is a static demo inside the portal.
+              Live hotel inventory search will connect to supplier APIs soon.
+              For custom or offline hotel needs, submit a request below.
             </p>
           </div>
 
@@ -131,6 +132,55 @@ export default function HotelsLandingPage() {
               </ul>
             </div>
           </div>
+        </section>
+
+        <section className="mt-10 grid gap-4 md:grid-cols-3">
+          {[
+            {
+              title: "Live Hotel Search",
+              text: "Search Makkah, Madinah and Jeddah hotels with instant availability.",
+              href: "#search",
+              cta: "Search Placeholder",
+              icon: Search,
+            },
+            {
+              title: "Offline Hotel Request",
+              text: "Need a special hotel, group block, or offline rate? Submit a demand request.",
+              href: "/hotels/offline-demands/new",
+              cta: "Submit Request",
+              icon: Hotel,
+            },
+            {
+              title: "My Requests & Quotations",
+              text: "Track your submitted hotel requests, quotations, confirmations, and HCN status.",
+              href: "/hotels/offline-demands",
+              cta: "View My Requests",
+              icon: FileText,
+            },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <Link
+                key={card.title}
+                href={card.href}
+                className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 shadow-xl transition hover:border-amber-400/40 hover:bg-slate-900"
+              >
+                <div className="mb-4 inline-flex rounded-2xl bg-amber-400/10 p-3 text-amber-300">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">{card.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-300">{card.text}</p>
+                <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-amber-300">
+                  {card.cta}
+                  <BedDouble className="h-4 w-4" />
+                </span>
+              </Link>
+            );
+          })}
+        </section>
+
+        <section id="search" className="sr-only">
+          Live hotel search anchor
         </section>
       </div>
     </div>

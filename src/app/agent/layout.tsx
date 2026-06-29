@@ -41,8 +41,8 @@ const nav = [
     icon: PackageOpen,
   },
   {
-    label: "Hotel Demand",
-    href: "/agent/hotel-demands",
+    label: "Hotels",
+    href: "/agent/hotels",
     icon: BedDouble,
   },
   {

@@ -99,7 +99,7 @@ const menu: MenuItem[] = [
       { label: "Supplier Bills", href: "/admin/hotels/kuraki/supplier-bills" },
       { label: "AI Logs", href: "/admin/hotels/kuraki/ai-logs" },
       { label: "Reports", href: "/admin/hotels/kuraki/reports" },
-      { label: "Offline Hotel Demands", href: "/hotels/offline-demands" },
+      { label: "Hotel RFQ Command Center", href: "/admin/hotels/offline-demands" },
     ],
   },
 
@@ -123,7 +123,7 @@ const menu: MenuItem[] = [
     icon: Users,
     children: [
       { label: "Agent Dashboard", href: "/agents/dashboard" },
-      { label: "All Agents", href: "/agents" },
+      { label: "All Agents", href: "/admin/agents" },
       { label: "Commission Rules", href: "/agents/commissions" },
       { label: "Credit Control", href: "/agents/credit-control" },
       { label: "Statements", href: "/agents/statements" },

@@ -40,6 +40,10 @@ const PUBLIC_PATHS = [
 
 const ROLE_RULES: { prefixes: string[]; roles: Role[] }[] = [
   {
+    prefixes: ["/admin/hotels/offline-demands"],
+    roles: ["super_admin", "admin", "operations"],
+  },
+  {
     prefixes: ["/admin", "/api/admin"],
     roles: ["super_admin", "admin"],
   },
