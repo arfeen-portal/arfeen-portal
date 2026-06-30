@@ -7,10 +7,17 @@ import {
   Clock,
   Globe2,
   Paintbrush,
+  Pencil,
   Rocket,
   ShieldCheck,
+  X,
   XCircle,
 } from "lucide-react";
+import {
+  MODULE_LABELS,
+  PROVISIONING_MODULE_KEYS,
+  type ProvisioningModuleKey,
+} from "@/lib/tenantModules";
 
 type TenantStatus =
   | "pending_approval"
@@ -40,24 +47,9 @@ type Tenant = {
   created_at: string;
 };
 
-const moduleOptions = [
-  "dashboard",
-  "transport",
-  "umrah",
-  "hotels",
-  "visa",
-  "contact",
-  "group_tickets",
-  "agents",
-  "accounts",
-  "reports",
-  "vouchers",
-  "refunds",
-  "airline_reports",
-  "white_label",
-];
+const moduleOptions = [...PROVISIONING_MODULE_KEYS];
 
-const publicModuleDefaults = [
+const publicModuleDefaults: ProvisioningModuleKey[] = [
   "dashboard",
   "transport",
   "umrah",
@@ -115,6 +107,9 @@ export default function TenantProvisioningPage() {
   } | null>(null);
 
   const [form, setForm] = useState(initialForm);
+  const [editTenant, setEditTenant] = useState<Tenant | null>(null);
+  const [editModules, setEditModules] = useState<ProvisioningModuleKey[]>([]);
+  const [editSaving, setEditSaving] = useState(false);
 
   async function loadTenants() {
     setLoading(true);
@@ -296,6 +291,73 @@ export default function TenantProvisioningPage() {
     }
   }
 
+  function openEditModules(tenant: Tenant) {
+    setEditTenant(tenant);
+    setEditModules(
+      (tenant.allowed_modules || []).filter((m): m is ProvisioningModuleKey =>
+        moduleOptions.includes(m as ProvisioningModuleKey)
+      )
+    );
+  }
+
+  function closeEditModules() {
+    setEditTenant(null);
+    setEditModules([]);
+    setEditSaving(false);
+  }
+
+  function toggleEditModule(module: ProvisioningModuleKey) {
+    setEditModules((prev) =>
+      prev.includes(module) ? prev.filter((m) => m !== module) : [...prev, module]
+    );
+  }
+
+  async function saveEditModules() {
+    if (!editTenant) return;
+
+    if (!editModules.length) {
+      setMessage({ type: "error", text: "At least one module must remain enabled." });
+      return;
+    }
+
+    setEditSaving(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/admin/tenant-provisioning", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editTenant.id,
+          action: "update_modules",
+          allowed_modules: editModules,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!json.ok) {
+        setMessage({
+          type: "error",
+          text: json.error || "Failed to update tenant modules.",
+        });
+        return;
+      }
+
+      setMessage({
+        type: "success",
+        text: `${editTenant.tenant_name} modules updated. Live portal flags synced.`,
+      });
+
+      closeEditModules();
+      await loadTenants();
+    } catch {
+      setMessage({ type: "error", text: "Failed to update tenant modules." });
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 p-6 text-white">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -461,13 +523,14 @@ export default function TenantProvisioningPage() {
                       key={m}
                       type="button"
                       onClick={() => toggleModule(m)}
+                      title={MODULE_LABELS[m]}
                       className={`rounded-xl border px-3 py-2 text-xs font-semibold ${
                         form.allowed_modules.includes(m)
                           ? "border-teal-400 bg-teal-400/15 text-teal-200"
                           : "border-white/10 bg-slate-900 text-slate-400"
                       }`}
                     >
-                      {m}
+                      {MODULE_LABELS[m]}
                     </button>
                   ))}
                 </div>
@@ -573,6 +636,7 @@ export default function TenantProvisioningPage() {
                             tenant={tenant}
                             actionLoading={actionLoading}
                             onAction={actionTenant}
+                            onEditModules={openEditModules}
                           />
                         </td>
                       </tr>
@@ -584,6 +648,82 @@ export default function TenantProvisioningPage() {
           </div>
         </section>
       </div>
+
+      {editTenant ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-teal-300">
+                  Edit Modules
+                </p>
+                <h3 className="mt-2 text-xl font-bold text-white">
+                  {editTenant.tenant_name}
+                </h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  {editTenant.custom_domain || editTenant.slug} · {editTenant.status}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditModules}
+                className="rounded-xl border border-white/10 p-2 text-slate-300 hover:bg-white/5"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="mt-4 text-sm text-slate-400">
+              Changes sync to live portal module flags for this domain. Routes stay
+              in place; disabled modules are hidden from public navbar and sidebar.
+            </p>
+
+            <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-3">
+              {moduleOptions.map((moduleKey) => {
+                const selected = editModules.includes(moduleKey);
+
+                return (
+                  <button
+                    key={moduleKey}
+                    type="button"
+                    onClick={() => toggleEditModule(moduleKey)}
+                    className={`rounded-xl border px-3 py-3 text-left text-xs font-semibold ${
+                      selected
+                        ? "border-teal-400 bg-teal-400/15 text-teal-100"
+                        : "border-white/10 bg-slate-950 text-slate-400"
+                    }`}
+                  >
+                    <span className="block text-[11px] uppercase tracking-wide text-slate-500">
+                      {moduleKey}
+                    </span>
+                    <span className="mt-1 block text-sm">{MODULE_LABELS[moduleKey]}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeEditModules}
+                className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveEditModules}
+                disabled={editSaving || editModules.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl bg-teal-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-teal-400 disabled:opacity-50"
+              >
+                <Pencil size={14} />
+                {editSaving ? "Saving..." : "Save Modules"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -592,6 +732,7 @@ function TenantActions({
   tenant,
   actionLoading,
   onAction,
+  onEditModules,
 }: {
   tenant: Tenant;
   actionLoading: string | null;
@@ -599,12 +740,26 @@ function TenantActions({
     id: string,
     action: "approve" | "reject" | "go_live"
   ) => Promise<void>;
+  onEditModules: (tenant: Tenant) => void;
 }) {
   const isBusy = (action: string) => actionLoading === `${tenant.id}:${action}`;
 
+  const editButton =
+    tenant.status !== "rejected" ? (
+      <button
+        type="button"
+        onClick={() => onEditModules(tenant)}
+        className="inline-flex items-center gap-1 rounded-lg border border-indigo-400/30 px-3 py-2 text-xs font-bold text-indigo-200 hover:bg-indigo-400/10"
+      >
+        <Pencil size={12} />
+        Edit Modules
+      </button>
+    ) : null;
+
   if (tenant.status === "pending_approval") {
     return (
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        {editButton}
         <button
           onClick={() => onAction(tenant.id, "approve")}
           disabled={isBusy("approve")}
@@ -626,7 +781,8 @@ function TenantActions({
 
   if (tenant.status === "approved_ready") {
     return (
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        {editButton}
         <button
           onClick={() => onAction(tenant.id, "go_live")}
           disabled={isBusy("go_live")}
@@ -648,8 +804,11 @@ function TenantActions({
 
   if (tenant.status === "live") {
     return (
-      <div className="text-right text-xs font-semibold text-emerald-300">
-        Live customer website
+      <div className="flex flex-col items-end gap-2">
+        {editButton}
+        <div className="text-xs font-semibold text-emerald-300">
+          Live customer website
+        </div>
       </div>
     );
   }

@@ -1,3 +1,5 @@
+import { ARFEENPORTAL_DEMO_MODULES, allowedModulesToTenantNavModules } from "@/lib/tenantModules";
+
 export type TenantType = "master" | "client";
 
 export type TenantModuleKey =
@@ -46,16 +48,7 @@ export const clientTenant: TenantConfig = {
   shortName: "AP",
   tagline: "Premium Umrah & Travel Services",
   logoText: "AP",
-  modules: {
-    umrahPackages: true,
-    groupTickets: true,
-    hotels: true,
-    transport: true,
-    visa: true,
-    contact: true,
-    agentLogin: false,
-    bookNow: true,
-  },
+  modules: allowedModulesToTenantNavModules(ARFEENPORTAL_DEMO_MODULES),
 };
 
 function normalizeHost(host?: string | null): string {

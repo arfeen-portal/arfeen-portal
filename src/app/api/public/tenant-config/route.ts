@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  ARFEENPORTAL_DEMO_MODULES,
+  portalModuleMapFromAllowed,
+} from "@/lib/tenantModules";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 function cleanDomain(host: string) {
-  return host.toLowerCase().replace(/^www\./, "").split(":")[0];
+  return host
+    .toLowerCase()
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split(":")[0];
 }
 
 export async function GET(req: NextRequest) {
@@ -25,26 +34,44 @@ export async function GET(req: NextRequest) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: allDomains, error: listError } = await supabase
+  const { data: domainRow, error: domainError } = await supabase
     .from("portal_domains")
     .select("tenant_id, domain, is_primary, is_verified, ssl_status")
-    .ilike("domain", "%arfeenportal%");
+    .eq("domain", domain)
+    .maybeSingle();
 
-  const domainRow = allDomains?.find(
-    (row) => row.domain?.toLowerCase() === domain
-  );
+  let tenantId = domainRow?.tenant_id ?? null;
+  let allowedModules: string[] | null = null;
 
-  if (listError || !domainRow) {
+  if (!tenantId) {
+    const { data: saasTenant } = await supabase
+      .from("saas_tenants")
+      .select("id, allowed_modules, status, custom_domain")
+      .eq("custom_domain", domain)
+      .maybeSingle();
+
+    if (saasTenant?.id) {
+      tenantId = saasTenant.id;
+      allowedModules = saasTenant.allowed_modules || [];
+    }
+  }
+
+  if (!tenantId) {
+    const fallbackModules =
+      domain === "arfeenportal.com"
+        ? portalModuleMapFromAllowed(ARFEENPORTAL_DEMO_MODULES)
+        : {};
+
     return NextResponse.json({
       ok: true,
       source: "fallback",
-      reason: listError?.message || "domain_not_found",
+      reason: domainError?.message || "domain_not_found",
       host,
       domain,
       supabaseProject,
-      matchedDomains: allDomains || [],
       tenant: null,
-      modules: {},
+      modules: fallbackModules,
+      allowed_modules: domain === "arfeenportal.com" ? ARFEENPORTAL_DEMO_MODULES : [],
       settings: null,
     });
   }
@@ -52,21 +79,35 @@ export async function GET(req: NextRequest) {
   const { data: modules } = await supabase
     .from("portal_module_flags")
     .select("module_key, is_enabled")
-    .eq("tenant_id", domainRow.tenant_id);
+    .eq("tenant_id", tenantId);
 
   const { data: settings } = await supabase
     .from("portal_settings")
     .select("*")
-    .eq("tenant_id", domainRow.tenant_id)
+    .eq("tenant_id", tenantId)
     .maybeSingle();
 
-  const moduleMap = (modules || []).reduce<Record<string, boolean>>(
-    (acc, item) => {
-      acc[item.module_key] = item.is_enabled;
-      return acc;
-    },
-    {}
-  );
+  let moduleMap = (modules || []).reduce<Record<string, boolean>>((acc, item) => {
+    acc[item.module_key] = item.is_enabled;
+    return acc;
+  }, {});
+
+  if (!Object.keys(moduleMap).length && allowedModules?.length) {
+    moduleMap = portalModuleMapFromAllowed(allowedModules);
+  }
+
+  if (!Object.keys(moduleMap).length) {
+    const { data: saasTenant } = await supabase
+      .from("saas_tenants")
+      .select("allowed_modules")
+      .eq("id", tenantId)
+      .maybeSingle();
+
+    if (saasTenant?.allowed_modules?.length) {
+      allowedModules = saasTenant.allowed_modules;
+      moduleMap = portalModuleMapFromAllowed(saasTenant.allowed_modules);
+    }
+  }
 
   return NextResponse.json({
     ok: true,
@@ -74,8 +115,9 @@ export async function GET(req: NextRequest) {
     host,
     domain,
     supabaseProject,
-    tenant: domainRow,
+    tenant: domainRow || { tenant_id: tenantId, domain },
     modules: moduleMap,
+    allowed_modules: allowedModules,
     settings,
   });
 }

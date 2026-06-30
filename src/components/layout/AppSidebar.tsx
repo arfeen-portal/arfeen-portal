@@ -23,6 +23,8 @@ import {
 import { useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { clientLogout } from "@/lib/auth/clientLogout";
+import { useTenantModules } from "@/hooks/useTenantModules";
+import { SIDEBAR_SECTION_MODULE, isProvisioningModuleEnabled } from "@/lib/tenantModules";
 
 type MenuItem = {
   label: string;
@@ -229,8 +231,19 @@ function isPathActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function AppSidebar() {
+export default function AppSidebar({ host }: { host?: string | null }) {
   const pathname = usePathname();
+  const { isMaster, moduleMap } = useTenantModules(host);
+
+  const visibleMenu = useMemo(() => {
+    if (isMaster) return menu;
+
+    return menu.filter((item) => {
+      const moduleKey = SIDEBAR_SECTION_MODULE[item.label];
+      if (!moduleKey) return true;
+      return isProvisioningModuleEnabled(moduleMap, moduleKey);
+    });
+  }, [isMaster, moduleMap]);
 
   async function handleSignOut() {
     await clientLogout();
@@ -239,14 +252,14 @@ export default function AppSidebar() {
   const defaultOpen = useMemo(() => {
     const map: Record<string, boolean> = {};
 
-    for (const section of menu) {
+    for (const section of visibleMenu) {
       if (section.children?.some((child) => isPathActive(pathname, child.href))) {
         map[section.label] = true;
       }
     }
 
     return map;
-  }, [pathname]);
+  }, [pathname, visibleMenu]);
 
   const [openSections, setOpenSections] =
     useState<Record<string, boolean>>(defaultOpen);
@@ -275,7 +288,7 @@ export default function AppSidebar() {
 
         <nav className="flex-1 overflow-y-auto px-4 py-4">
           <div className="space-y-2">
-            {menu.map((item) => {
+            {visibleMenu.map((item) => {
               const Icon = item.icon;
 
               if (item.href) {

@@ -1,25 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdminSafe } from "@/lib/supabaseAdminSafe";
+import {
+  normalizeAllowedModules,
+  PROVISIONING_MODULE_KEYS,
+  portalModuleMapFromAllowed,
+} from "@/lib/tenantModules";
+import { syncTenantPortalModules } from "@/lib/syncTenantPortalModules";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const defaultModules = [
-  "dashboard",
-  "transport",
-  "umrah",
-  "hotels",
-  "visa",
-  "contact",
-  "group_tickets",
-  "agents",
-  "accounts",
-  "reports",
-  "vouchers",
-  "refunds",
-  "airline_reports",
-  "white_label",
-];
+const defaultModules = [...PROVISIONING_MODULE_KEYS.filter((key) =>
+  ["dashboard", "transport", "umrah", "hotels", "visa", "contact", "group_tickets", "agents", "accounts", "reports", "vouchers", "refunds", "airline_reports", "white_label"].includes(key)
+)];
 
 function slugify(value: string) {
   return value
@@ -299,7 +292,9 @@ export async function POST(req: NextRequest) {
     contact_phone: body.contact_phone || null,
     bio: body.bio || ai.content_suggestions.about_us,
     plan_name: body.plan_name || "starter",
-    allowed_modules: Array.isArray(body.allowed_modules) ? body.allowed_modules : defaultModules,
+    allowed_modules: normalizeAllowedModules(
+      Array.isArray(body.allowed_modules) ? body.allowed_modules : defaultModules
+    ),
     status: "pending_approval",
     approval_status: "pending",
     domain_verified: false,
@@ -398,6 +393,20 @@ export async function PATCH(req: NextRequest) {
       domain_verified: true,
       go_live_at: new Date().toISOString(),
     };
+  } else if (action === "update_modules") {
+    const allowedModules = normalizeAllowedModules(body.allowed_modules);
+
+    if (!allowedModules.length) {
+      return NextResponse.json(
+        { ok: false, error: "At least one module must remain enabled." },
+        { status: 400 }
+      );
+    }
+
+    updatePayload = {
+      allowed_modules: allowedModules,
+      updated_at: new Date().toISOString(),
+    };
   } else if (action === "update") {
     updatePayload = {
       tenant_name: body.tenant_name,
@@ -409,7 +418,7 @@ export async function PATCH(req: NextRequest) {
       contact_phone: body.contact_phone || null,
       bio: body.bio || null,
       plan_name: body.plan_name,
-      allowed_modules: Array.isArray(body.allowed_modules) ? body.allowed_modules : [],
+      allowed_modules: normalizeAllowedModules(body.allowed_modules),
       updated_at: new Date().toISOString(),
     };
   } else {
@@ -430,8 +439,35 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
+  const shouldSyncModules =
+    action === "go_live" ||
+    action === "update_modules" ||
+    (action === "update" && Array.isArray(body.allowed_modules));
+
+  if (shouldSyncModules) {
+    try {
+      await syncTenantPortalModules(supabase, {
+        tenantId: data.id,
+        customDomain: data.custom_domain,
+        allowedModules: data.allowed_modules || [],
+      });
+    } catch (syncError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            syncError instanceof Error
+              ? syncError.message
+              : "Failed to sync live portal modules.",
+        },
+        { status: 500 }
+      );
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     tenant: data,
+    modules: portalModuleMapFromAllowed(data.allowed_modules || []),
   });
 }

@@ -22,6 +22,7 @@ import {
 import AppSidebar from "@/components/layout/AppSidebar";
 import { getTenantByHost } from "@/lib/tenantConfig";
 import { clientLogout } from "@/lib/auth/clientLogout";
+import { useTenantModules } from "@/hooks/useTenantModules";
 
 type ShellRouterProps = {
   children: ReactNode;
@@ -89,6 +90,19 @@ export default function ShellRouter({ children }: ShellRouterProps) {
     return getTenantByHost(host);
   }, [host]);
 
+  const { navModules, isMaster: tenantModulesMaster } = useTenantModules(host);
+
+  const effectiveTenant = useMemo(() => {
+    if (tenantModulesMaster) {
+      return tenant;
+    }
+
+    return {
+      ...tenant,
+      modules: navModules,
+    };
+  }, [tenant, navModules, tenantModulesMaster]);
+
   async function handleSignOut() {
     if (signingOut) return;
     setSigningOut(true);
@@ -105,37 +119,37 @@ export default function ShellRouter({ children }: ShellRouterProps) {
       label: "Umrah Packages",
       href: "/umrah-packages",
       icon: Building2,
-      enabled: tenant.modules.umrahPackages,
+      enabled: effectiveTenant.modules.umrahPackages,
     },
     {
       label: "Group Tickets",
       href: "/umrah/groups",
       icon: Ticket,
-      enabled: tenant.modules.groupTickets,
+      enabled: effectiveTenant.modules.groupTickets,
     },
     {
       label: "Hotels",
       href: "/hotels",
       icon: Hotel,
-      enabled: tenant.modules.hotels,
+      enabled: effectiveTenant.modules.hotels,
     },
     {
       label: "Transport",
       href: "/transport",
       icon: Car,
-      enabled: tenant.modules.transport,
+      enabled: effectiveTenant.modules.transport,
     },
     {
       label: "Visa",
       href: "/umrah/visa",
       icon: ShieldCheck,
-      enabled: tenant.modules.visa,
+      enabled: effectiveTenant.modules.visa,
     },
     {
       label: "Contact",
       href: "/contact",
       icon: Phone,
-      enabled: tenant.modules.contact,
+      enabled: effectiveTenant.modules.contact,
     },
   ].filter((item) => item.enabled);
 
@@ -146,7 +160,7 @@ export default function ShellRouter({ children }: ShellRouterProps) {
   if (masterHost || isPortalPath(pathname)) {
     return (
       <div className="min-h-screen bg-slate-50 md:flex">
-        <AppSidebar />
+        <AppSidebar host={host} />
 
         <div className="flex min-h-screen flex-1 flex-col">
           <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -198,10 +212,10 @@ export default function ShellRouter({ children }: ShellRouterProps) {
 
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-300">
-                {tenant.brandName}
+                {effectiveTenant.brandName}
               </p>
               <h1 className="text-lg font-black leading-tight">
-                {tenant.tagline}
+                {effectiveTenant.tagline}
               </h1>
             </div>
           </Link>
@@ -233,15 +247,17 @@ export default function ShellRouter({ children }: ShellRouterProps) {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <Link
-              href="/agents/register"
-              className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-2 text-sm font-bold text-amber-300 transition hover:bg-amber-400/20"
-            >
-              <UserPlus size={16} />
-              B2B Agent Register
-            </Link>
+            {effectiveTenant.modules.agentLogin ? (
+              <Link
+                href="/agents/register"
+                className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-2 text-sm font-bold text-amber-300 transition hover:bg-amber-400/20"
+              >
+                <UserPlus size={16} />
+                B2B Agent Register
+              </Link>
+            ) : null}
 
-            {tenant.modules.agentLogin ? (
+            {effectiveTenant.modules.agentLogin ? (
               <Link
                 href="/login"
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2 text-sm font-bold text-white transition hover:bg-white/10"
@@ -251,7 +267,7 @@ export default function ShellRouter({ children }: ShellRouterProps) {
               </Link>
             ) : null}
 
-            {tenant.modules.bookNow ? (
+            {effectiveTenant.modules.bookNow ? (
               <Link
                 href="/contact"
                 className="rounded-full bg-amber-400 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-amber-400/20 transition hover:bg-amber-300"
@@ -288,16 +304,18 @@ export default function ShellRouter({ children }: ShellRouterProps) {
                 );
               })}
 
-              <Link
-                href="/agents/register"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-300"
-              >
-                <UserPlus size={16} />
-                B2B Agent Register
-              </Link>
+              {effectiveTenant.modules.agentLogin ? (
+                <Link
+                  href="/agents/register"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-300"
+                >
+                  <UserPlus size={16} />
+                  B2B Agent Register
+                </Link>
+              ) : null}
 
-              {tenant.modules.agentLogin ? (
+              {effectiveTenant.modules.agentLogin ? (
                 <Link
                   href="/login"
                   onClick={() => setMenuOpen(false)}
