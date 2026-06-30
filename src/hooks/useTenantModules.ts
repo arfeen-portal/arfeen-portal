@@ -90,9 +90,19 @@ export function useTenantModules(host?: string | null): TenantModulesState {
     };
   }, [isMaster, baseTenant.modules, moduleMap]);
 
+  const enabledModuleSet = useMemo(
+    () =>
+      new Set(
+        Object.entries(moduleMap)
+          .filter(([, enabled]) => enabled)
+          .map(([key]) => key)
+      ),
+    [moduleMap]
+  );
+
   const isModuleEnabled = (moduleKey: string) => {
     if (isMaster) return true;
-    return isProvisioningModuleEnabled(moduleMap, moduleKey);
+    return isProvisioningModuleEnabled(enabledModuleSet, moduleKey);
   };
 
   const isSidebarSectionEnabled = (sectionLabel: string, sectionModuleKey?: string) => {

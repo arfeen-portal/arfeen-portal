@@ -238,10 +238,16 @@ export default function AppSidebar({ host }: { host?: string | null }) {
   const visibleMenu = useMemo(() => {
     if (isMaster) return menu;
 
+    const enabledModuleSet = new Set(
+      Object.entries(moduleMap)
+        .filter(([, enabled]) => enabled)
+        .map(([key]) => key)
+    );
+
     return menu.filter((item) => {
       const moduleKey = SIDEBAR_SECTION_MODULE[item.label];
       if (!moduleKey) return true;
-      return isProvisioningModuleEnabled(moduleMap, moduleKey);
+      return isProvisioningModuleEnabled(enabledModuleSet, moduleKey);
     });
   }, [isMaster, moduleMap]);
 
