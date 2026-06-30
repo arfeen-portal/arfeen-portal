@@ -47,7 +47,7 @@ type Tenant = {
   created_at: string;
 };
 
-const moduleOptions = [...PROVISIONING_MODULE_KEYS];
+const moduleOptions: ProvisioningModuleKey[] = [...PROVISIONING_MODULE_KEYS];
 
 const publicModuleDefaults: ProvisioningModuleKey[] = [
   "dashboard",
@@ -152,7 +152,7 @@ export default function TenantProvisioningPage() {
     };
   }, [tenants]);
 
-  function toggleModule(module: string) {
+  function toggleModule(module: ProvisioningModuleKey) {
     setForm((prev) => ({
       ...prev,
       allowed_modules: prev.allowed_modules.includes(module)
