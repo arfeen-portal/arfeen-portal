@@ -20,8 +20,10 @@ import {
 } from "@/lib/tenantModules";
 import {
   getDefaultFeaturesForModules,
+  getFeatureByKey,
   getFeaturesForModule,
   normalizeAllowedFeatures,
+  sanitizeAllowedFeaturesForModules,
 } from "@/lib/tenantFeatures";
 
 type TenantStatus =
@@ -37,6 +39,8 @@ type Tenant = {
   status: TenantStatus | string;
   approval_status: string;
   custom_domain: string | null;
+  display_domain?: string | null;
+  display_domain_verified?: boolean;
   subdomain: string | null;
   logo_url: string | null;
   primary_color: string;
@@ -101,6 +105,18 @@ function cleanDomain(value: string) {
     .replace(/\/.*$/, "");
 }
 
+function tenantDisplayDomain(tenant: Tenant) {
+  return (
+    tenant.display_domain ||
+    tenant.custom_domain ||
+    (tenant.subdomain ? `${tenant.subdomain}.yourportal.com` : "No domain")
+  );
+}
+
+function tenantDisplayDomainVerified(tenant: Tenant) {
+  return tenant.display_domain_verified ?? tenant.domain_verified;
+}
+
 export default function TenantProvisioningPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,6 +133,10 @@ export default function TenantProvisioningPage() {
   const [editModules, setEditModules] = useState<ProvisioningModuleKey[]>([]);
   const [editFeatures, setEditFeatures] = useState<string[]>([]);
   const [editSaving, setEditSaving] = useState(false);
+  const [editFeedback, setEditFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   async function loadTenants() {
     setLoading(true);
@@ -305,6 +325,7 @@ export default function TenantProvisioningPage() {
 
     setEditTenant(tenant);
     setEditModules(modules);
+    setEditFeedback(null);
     setEditFeatures(
       tenant.allowed_features?.length
         ? normalizeAllowedFeatures(tenant.allowed_features)
@@ -317,6 +338,7 @@ export default function TenantProvisioningPage() {
     setEditModules([]);
     setEditFeatures([]);
     setEditSaving(false);
+    setEditFeedback(null);
   }
 
   function toggleEditModule(module: ProvisioningModuleKey) {
@@ -365,44 +387,59 @@ export default function TenantProvisioningPage() {
     if (!editTenant) return;
 
     if (!editModules.length) {
-      setMessage({ type: "error", text: "At least one module must remain enabled." });
+      setEditFeedback({
+        type: "error",
+        text: "At least one module must remain enabled.",
+      });
       return;
     }
 
+    const payload = {
+      id: editTenant.id,
+      action: "update_modules" as const,
+      allowed_modules: editModules,
+      allowed_features: sanitizeAllowedFeaturesForModules(editModules, editFeatures),
+    };
+
     setEditSaving(true);
+    setEditFeedback(null);
     setMessage(null);
 
     try {
       const res = await fetch("/api/admin/tenant-provisioning", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: editTenant.id,
-          action: "update_modules",
-          allowed_modules: editModules,
-          allowed_features: editFeatures,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
 
-      if (!json.ok) {
-        setMessage({
-          type: "error",
-          text: json.error || "Failed to update tenant modules.",
-        });
+      if (!res.ok || !json.ok) {
+        const errorText =
+          json.error ||
+          json.message ||
+          `Save failed (${res.status} ${res.statusText || "error"})`;
+
+        setEditFeedback({ type: "error", text: errorText });
+        setMessage({ type: "error", text: errorText });
         return;
       }
 
-      setMessage({
-        type: "success",
-        text: `${editTenant.tenant_name} modules updated. Live portal flags synced.`,
-      });
+      const moduleCount = Object.values(json.modules || {}).filter(Boolean).length;
+      const featureCount = Object.values(json.features || {}).filter(Boolean).length;
+      const successText = `${editTenant.tenant_name} saved: ${moduleCount} module(s), ${featureCount} feature(s) synced to live portal.`;
 
-      closeEditModules();
+      setEditFeedback({ type: "success", text: successText });
+      setMessage({ type: "success", text: successText });
+
       await loadTenants();
-    } catch {
-      setMessage({ type: "error", text: "Failed to update tenant modules." });
+      closeEditModules();
+    } catch (error) {
+      const errorText =
+        error instanceof Error ? error.message : "Failed to update tenant modules.";
+
+      setEditFeedback({ type: "error", text: errorText });
+      setMessage({ type: "error", text: errorText });
     } finally {
       setEditSaving(false);
     }
@@ -655,11 +692,10 @@ export default function TenantProvisioningPage() {
 
                         <td className="px-4 py-4">
                           <div className="text-slate-200">
-                            {tenant.custom_domain ||
-                              `${tenant.subdomain}.yourportal.com`}
+                            {tenantDisplayDomain(tenant)}
                           </div>
                           <div className="text-xs text-slate-500">
-                            {tenant.domain_verified
+                            {tenantDisplayDomainVerified(tenant)
                               ? "Verified"
                               : "Not verified"}
                           </div>
@@ -711,7 +747,7 @@ export default function TenantProvisioningPage() {
                   {editTenant.tenant_name}
                 </h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  {editTenant.custom_domain || editTenant.slug} · {editTenant.status}
+                  {tenantDisplayDomain(editTenant)} · {editTenant.status}
                 </p>
               </div>
               <button
@@ -728,6 +764,19 @@ export default function TenantProvisioningPage() {
               Enable main modules, then choose sidebar sub-features per module. Changes
               sync to live portal module and feature flags for this domain.
             </p>
+
+            {editFeedback ? (
+              <div
+                className={[
+                  "mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold",
+                  editFeedback.type === "success"
+                    ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                    : "border-rose-400/30 bg-rose-400/10 text-rose-200",
+                ].join(" ")}
+              >
+                {editFeedback.text}
+              </div>
+            ) : null}
 
             <div className="mt-5 space-y-4">
               {moduleOptions.map((moduleKey) => {

@@ -8,6 +8,7 @@ import {
   buildPortalFeatureFlagRows,
   getDefaultFeaturesForModules,
   normalizeAllowedFeatures,
+  sanitizeAllowedFeaturesForModules,
 } from "@/lib/tenantFeatures";
 
 function cleanDomain(value: string) {
@@ -35,8 +36,8 @@ export async function syncTenantPortalModules(
   }
 
   const allowedFeatures =
-    params.allowedFeatures !== undefined && params.allowedFeatures.length > 0
-      ? normalizeAllowedFeatures(params.allowedFeatures)
+    params.allowedFeatures !== undefined
+      ? sanitizeAllowedFeaturesForModules(allowedModules, params.allowedFeatures)
       : getDefaultFeaturesForModules(allowedModules);
 
   const domain = params.customDomain ? cleanDomain(params.customDomain) : null;
@@ -49,7 +50,7 @@ export async function syncTenantPortalModules(
       .maybeSingle();
 
     if (existingDomain?.id) {
-      await supabase
+      const { error: domainUpdateError } = await supabase
         .from("portal_domains")
         .update({
           tenant_id: params.tenantId,
@@ -58,8 +59,12 @@ export async function syncTenantPortalModules(
           ssl_status: "active",
         })
         .eq("id", existingDomain.id);
+
+      if (domainUpdateError) {
+        throw new Error(domainUpdateError.message);
+      }
     } else {
-      await supabase.from("portal_domains").insert([
+      const { error: domainInsertError } = await supabase.from("portal_domains").insert([
         {
           tenant_id: params.tenantId,
           domain,
@@ -68,6 +73,10 @@ export async function syncTenantPortalModules(
           ssl_status: "active",
         },
       ]);
+
+      if (domainInsertError) {
+        throw new Error(domainInsertError.message);
+      }
     }
   }
 
@@ -78,7 +87,14 @@ export async function syncTenantPortalModules(
     allowedFeatures
   );
 
-  await supabase.from("portal_module_flags").delete().eq("tenant_id", params.tenantId);
+  const { error: moduleDeleteError } = await supabase
+    .from("portal_module_flags")
+    .delete()
+    .eq("tenant_id", params.tenantId);
+
+  if (moduleDeleteError) {
+    throw new Error(moduleDeleteError.message);
+  }
 
   const { error: moduleInsertError } = await supabase
     .from("portal_module_flags")
@@ -88,7 +104,14 @@ export async function syncTenantPortalModules(
     throw new Error(moduleInsertError.message);
   }
 
-  await supabase.from("portal_feature_flags").delete().eq("tenant_id", params.tenantId);
+  const { error: featureDeleteError } = await supabase
+    .from("portal_feature_flags")
+    .delete()
+    .eq("tenant_id", params.tenantId);
+
+  if (featureDeleteError) {
+    throw new Error(featureDeleteError.message);
+  }
 
   const { error: featureInsertError } = await supabase
     .from("portal_feature_flags")

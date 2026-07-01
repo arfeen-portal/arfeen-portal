@@ -7,13 +7,19 @@ import {
 } from "@/lib/tenantModules";
 import { syncTenantPortalModules } from "@/lib/syncTenantPortalModules";
 import {
+  buildFeatureMapFromAllowed,
   getDefaultFeaturesForModules,
   normalizeAllowedFeatures,
-  buildFeatureMapFromAllowed,
+  sanitizeAllowedFeaturesForModules,
 } from "@/lib/tenantFeatures";
+import {
+  enrichTenantsWithDisplayDomains,
+  resolveLiveDomainForTenant,
+} from "@/lib/resolveTenantDisplayDomain";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const runtime = "nodejs";
 
 const defaultModules = [...PROVISIONING_MODULE_KEYS.filter((key) =>
   ["dashboard", "transport", "umrah", "hotels", "visa", "contact", "group_tickets", "agents", "accounts", "reports", "vouchers", "refunds", "airline_reports", "white_label"].includes(key)
@@ -146,9 +152,26 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: tenantsRes.error.message }, { status: 500 });
   }
 
+  let tenants = tenantsRes.data || [];
+
+  try {
+    tenants = await enrichTenantsWithDisplayDomains(supabase, tenants);
+  } catch (domainError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          domainError instanceof Error
+            ? domainError.message
+            : "Failed to load tenant domains.",
+      },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json({
     ok: true,
-    tenants: tenantsRes.data || [],
+    tenants,
     ai_items: aiRes.error ? [] : aiRes.data || [],
   });
 }
@@ -336,38 +359,43 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const supabase = getSupabaseAdminSafe();
+  try {
+    const supabase = getSupabaseAdminSafe();
 
-  if (!supabase) {
-    return NextResponse.json(
-      { ok: false, error: "Supabase admin client is not configured." },
-      { status: 500 }
-    );
-  }
+    if (!supabase) {
+      return NextResponse.json(
+        { ok: false, error: "Supabase admin client is not configured." },
+        { status: 500 }
+      );
+    }
 
-  const body = await req.json();
-  const id = body.id;
-  const action = body.action;
+    const body = await req.json().catch(() => ({}));
+    const id = String(body.id ?? "").trim();
+    const action = String(body.action ?? "").trim();
 
-  if (!id) {
-    return NextResponse.json(
-      { ok: false, error: "Tenant id is required." },
-      { status: 400 }
-    );
-  }
+    if (!id) {
+      return NextResponse.json(
+        { ok: false, error: "Tenant id is required." },
+        { status: 400 }
+      );
+    }
 
-  const { data: tenant, error: readError } = await supabase
-    .from("saas_tenants")
-    .select("*")
-    .eq("id", id)
-    .single();
+    const { data: tenant, error: readError } = await supabase
+      .from("saas_tenants")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
 
-  if (readError || !tenant) {
-    return NextResponse.json(
-      { ok: false, error: readError?.message || "Tenant not found." },
-      { status: 404 }
-    );
-  }
+    if (readError) {
+      return NextResponse.json({ ok: false, error: readError.message }, { status: 500 });
+    }
+
+    if (!tenant) {
+      return NextResponse.json(
+        { ok: false, error: "Tenant not found." },
+        { status: 404 }
+      );
+    }
 
   let updatePayload: any = {};
 
@@ -416,7 +444,8 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const allowedFeatures = normalizeAllowedFeatures(
+    const allowedFeatures = sanitizeAllowedFeaturesForModules(
+      allowedModules,
       body.allowed_features ?? getDefaultFeaturesForModules(allowedModules)
     );
 
@@ -464,11 +493,37 @@ export async function PATCH(req: NextRequest) {
 
   if (shouldSyncModules) {
     try {
-      await syncTenantPortalModules(supabase, {
+      const liveDomain = await resolveLiveDomainForTenant(
+        supabase,
+        data.id,
+        data.custom_domain
+      );
+
+      const syncResult = await syncTenantPortalModules(supabase, {
         tenantId: data.id,
-        customDomain: data.custom_domain,
+        customDomain: liveDomain,
         allowedModules: data.allowed_modules || [],
-        allowedFeatures: data.allowed_features?.length ? data.allowed_features : undefined,
+        allowedFeatures: Array.isArray(data.allowed_features)
+          ? data.allowed_features
+          : undefined,
+      });
+
+      const [tenant] = await enrichTenantsWithDisplayDomains(supabase, [data]);
+
+      return NextResponse.json({
+        ok: true,
+        tenant,
+        sync: syncResult,
+        modules: portalModuleMapFromAllowed(data.allowed_modules || []),
+        features: buildFeatureMapFromAllowed(
+          normalizeAllowedModules(data.allowed_modules || []),
+          sanitizeAllowedFeaturesForModules(
+            normalizeAllowedModules(data.allowed_modules || []),
+            data.allowed_features || []
+          )
+        ),
+        allowed_modules: data.allowed_modules || [],
+        allowed_features: data.allowed_features || [],
       });
     } catch (syncError) {
       return NextResponse.json(
@@ -484,13 +539,30 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({
-    ok: true,
-    tenant: data,
-    modules: portalModuleMapFromAllowed(data.allowed_modules || []),
-    features: buildFeatureMapFromAllowed(
-      normalizeAllowedModules(data.allowed_modules || []),
-      normalizeAllowedFeatures(data.allowed_features || [])
-    ),
-  });
+    return NextResponse.json({
+      ok: true,
+      tenant: (await enrichTenantsWithDisplayDomains(supabase, [data]))[0],
+      modules: portalModuleMapFromAllowed(data.allowed_modules || []),
+      features: buildFeatureMapFromAllowed(
+        normalizeAllowedModules(data.allowed_modules || []),
+        sanitizeAllowedFeaturesForModules(
+          normalizeAllowedModules(data.allowed_modules || []),
+          data.allowed_features || []
+        )
+      ),
+      allowed_modules: data.allowed_modules || [],
+      allowed_features: data.allowed_features || [],
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update tenant provisioning record.",
+      },
+      { status: 500 }
+    );
+  }
 }
