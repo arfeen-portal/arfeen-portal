@@ -6,6 +6,11 @@ import {
   portalModuleMapFromAllowed,
 } from "@/lib/tenantModules";
 import { syncTenantPortalModules } from "@/lib/syncTenantPortalModules";
+import {
+  getDefaultFeaturesForModules,
+  normalizeAllowedFeatures,
+  buildFeatureMapFromAllowed,
+} from "@/lib/tenantFeatures";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -280,6 +285,15 @@ export async function POST(req: NextRequest) {
     turnover_range: body.turnover_range || "medium",
   });
 
+  const allowedModules = normalizeAllowedModules(
+    Array.isArray(body.allowed_modules) ? body.allowed_modules : defaultModules
+  );
+
+  const allowedFeatures =
+    body.allowed_features !== undefined
+      ? normalizeAllowedFeatures(body.allowed_features)
+      : getDefaultFeaturesForModules(allowedModules);
+
   const payload = {
     tenant_name: tenantName,
     slug,
@@ -292,9 +306,8 @@ export async function POST(req: NextRequest) {
     contact_phone: body.contact_phone || null,
     bio: body.bio || ai.content_suggestions.about_us,
     plan_name: body.plan_name || "starter",
-    allowed_modules: normalizeAllowedModules(
-      Array.isArray(body.allowed_modules) ? body.allowed_modules : defaultModules
-    ),
+    allowed_modules: allowedModules,
+    allowed_features: allowedFeatures,
     status: "pending_approval",
     approval_status: "pending",
     domain_verified: false,
@@ -403,8 +416,13 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    const allowedFeatures = normalizeAllowedFeatures(
+      body.allowed_features ?? getDefaultFeaturesForModules(allowedModules)
+    );
+
     updatePayload = {
       allowed_modules: allowedModules,
+      allowed_features: allowedFeatures,
       updated_at: new Date().toISOString(),
     };
   } else if (action === "update") {
@@ -450,6 +468,7 @@ export async function PATCH(req: NextRequest) {
         tenantId: data.id,
         customDomain: data.custom_domain,
         allowedModules: data.allowed_modules || [],
+        allowedFeatures: data.allowed_features?.length ? data.allowed_features : undefined,
       });
     } catch (syncError) {
       return NextResponse.json(
@@ -469,5 +488,9 @@ export async function PATCH(req: NextRequest) {
     ok: true,
     tenant: data,
     modules: portalModuleMapFromAllowed(data.allowed_modules || []),
+    features: buildFeatureMapFromAllowed(
+      normalizeAllowedModules(data.allowed_modules || []),
+      normalizeAllowedFeatures(data.allowed_features || [])
+    ),
   });
 }

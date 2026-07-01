@@ -18,6 +18,11 @@ import {
   PROVISIONING_MODULE_KEYS,
   type ProvisioningModuleKey,
 } from "@/lib/tenantModules";
+import {
+  getDefaultFeaturesForModules,
+  getFeaturesForModule,
+  normalizeAllowedFeatures,
+} from "@/lib/tenantFeatures";
 
 type TenantStatus =
   | "pending_approval"
@@ -41,6 +46,7 @@ type Tenant = {
   bio: string | null;
   plan_name: string;
   allowed_modules: string[];
+  allowed_features?: string[];
   domain_verified: boolean;
   approved_at: string | null;
   go_live_at: string | null;
@@ -109,6 +115,7 @@ export default function TenantProvisioningPage() {
   const [form, setForm] = useState(initialForm);
   const [editTenant, setEditTenant] = useState<Tenant | null>(null);
   const [editModules, setEditModules] = useState<ProvisioningModuleKey[]>([]);
+  const [editFeatures, setEditFeatures] = useState<string[]>([]);
   const [editSaving, setEditSaving] = useState(false);
 
   async function loadTenants() {
@@ -292,24 +299,66 @@ export default function TenantProvisioningPage() {
   }
 
   function openEditModules(tenant: Tenant) {
+    const modules = (tenant.allowed_modules || []).filter((m): m is ProvisioningModuleKey =>
+      moduleOptions.includes(m as ProvisioningModuleKey)
+    );
+
     setEditTenant(tenant);
-    setEditModules(
-      (tenant.allowed_modules || []).filter((m): m is ProvisioningModuleKey =>
-        moduleOptions.includes(m as ProvisioningModuleKey)
-      )
+    setEditModules(modules);
+    setEditFeatures(
+      tenant.allowed_features?.length
+        ? normalizeAllowedFeatures(tenant.allowed_features)
+        : getDefaultFeaturesForModules(modules)
     );
   }
 
   function closeEditModules() {
     setEditTenant(null);
     setEditModules([]);
+    setEditFeatures([]);
     setEditSaving(false);
   }
 
   function toggleEditModule(module: ProvisioningModuleKey) {
-    setEditModules((prev) =>
-      prev.includes(module) ? prev.filter((m) => m !== module) : [...prev, module]
+    setEditModules((prev) => {
+      const next = prev.includes(module)
+        ? prev.filter((m) => m !== module)
+        : [...prev, module];
+
+      setEditFeatures((currentFeatures) => {
+        if (!prev.includes(module)) {
+          const moduleFeatureKeys = getFeaturesForModule(module).map((f) => f.feature_key);
+          return [...new Set([...currentFeatures, ...moduleFeatureKeys])];
+        }
+
+        const moduleFeatureKeys = new Set(getFeaturesForModule(module).map((f) => f.feature_key));
+        return currentFeatures.filter((key) => !moduleFeatureKeys.has(key));
+      });
+
+      return next;
+    });
+  }
+
+  function toggleEditFeature(featureKey: string, moduleKey: ProvisioningModuleKey) {
+    if (!editModules.includes(moduleKey)) return;
+
+    setEditFeatures((prev) =>
+      prev.includes(featureKey)
+        ? prev.filter((key) => key !== featureKey)
+        : [...prev, featureKey]
     );
+  }
+
+  function selectAllFeaturesForModule(moduleKey: ProvisioningModuleKey) {
+    if (!editModules.includes(moduleKey)) return;
+
+    const keys = getFeaturesForModule(moduleKey).map((f) => f.feature_key);
+    setEditFeatures((prev) => [...new Set([...prev, ...keys])]);
+  }
+
+  function clearAllFeaturesForModule(moduleKey: ProvisioningModuleKey) {
+    const keys = new Set(getFeaturesForModule(moduleKey).map((f) => f.feature_key));
+    setEditFeatures((prev) => prev.filter((key) => !keys.has(key)));
   }
 
   async function saveEditModules() {
@@ -331,6 +380,7 @@ export default function TenantProvisioningPage() {
           id: editTenant.id,
           action: "update_modules",
           allowed_modules: editModules,
+          allowed_features: editFeatures,
         }),
       });
 
@@ -651,11 +701,11 @@ export default function TenantProvisioningPage() {
 
       {editTenant ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-teal-300">
-                  Edit Modules
+                  Edit Modules & Features
                 </p>
                 <h3 className="mt-2 text-xl font-bold text-white">
                   {editTenant.tenant_name}
@@ -675,30 +725,103 @@ export default function TenantProvisioningPage() {
             </div>
 
             <p className="mt-4 text-sm text-slate-400">
-              Changes sync to live portal module flags for this domain. Routes stay
-              in place; disabled modules are hidden from public navbar and sidebar.
+              Enable main modules, then choose sidebar sub-features per module. Changes
+              sync to live portal module and feature flags for this domain.
             </p>
 
-            <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-3">
+            <div className="mt-5 space-y-4">
               {moduleOptions.map((moduleKey) => {
-                const selected = editModules.includes(moduleKey);
+                const moduleEnabled = editModules.includes(moduleKey);
+                const moduleFeatures = getFeaturesForModule(moduleKey);
 
                 return (
-                  <button
+                  <div
                     key={moduleKey}
-                    type="button"
-                    onClick={() => toggleEditModule(moduleKey)}
-                    className={`rounded-xl border px-3 py-3 text-left text-xs font-semibold ${
-                      selected
-                        ? "border-teal-400 bg-teal-400/15 text-teal-100"
-                        : "border-white/10 bg-slate-950 text-slate-400"
+                    className={`rounded-2xl border p-4 ${
+                      moduleEnabled
+                        ? "border-teal-400/30 bg-teal-400/5"
+                        : "border-white/10 bg-slate-950/50"
                     }`}
                   >
-                    <span className="block text-[11px] uppercase tracking-wide text-slate-500">
-                      {moduleKey}
-                    </span>
-                    <span className="mt-1 block text-sm">{MODULE_LABELS[moduleKey]}</span>
-                  </button>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleEditModule(moduleKey)}
+                        className="text-left"
+                      >
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                          {moduleKey}
+                        </p>
+                        <p className="text-sm font-bold text-white">
+                          {MODULE_LABELS[moduleKey]}
+                        </p>
+                      </button>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-bold ${
+                            moduleEnabled
+                              ? "bg-teal-400/20 text-teal-200"
+                              : "bg-slate-800 text-slate-500"
+                          }`}
+                        >
+                          {moduleEnabled ? "Enabled" : "Disabled"}
+                        </span>
+                        {moduleEnabled && moduleFeatures.length > 0 ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => selectAllFeaturesForModule(moduleKey)}
+                              className="rounded-lg border border-white/10 px-2 py-1 text-[11px] font-semibold text-slate-300 hover:bg-white/5"
+                            >
+                              Select all
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => clearAllFeaturesForModule(moduleKey)}
+                              className="rounded-lg border border-white/10 px-2 py-1 text-[11px] font-semibold text-slate-300 hover:bg-white/5"
+                            >
+                              Clear all
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {moduleEnabled && moduleFeatures.length > 0 ? (
+                      <div className="mt-4 grid gap-2 md:grid-cols-2">
+                        {moduleFeatures.map((feature) => {
+                          const selected = editFeatures.includes(feature.feature_key);
+
+                          return (
+                            <label
+                              key={feature.feature_key}
+                              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2 text-sm ${
+                                selected
+                                  ? "border-indigo-400/30 bg-indigo-400/10 text-indigo-100"
+                                  : "border-white/10 bg-slate-950 text-slate-400"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() =>
+                                  toggleEditFeature(feature.feature_key, moduleKey)
+                                }
+                                className="mt-1"
+                              />
+                              <span>
+                                <span className="block font-semibold">{feature.label}</span>
+                                <span className="block text-[11px] text-slate-500">
+                                  {feature.feature_key}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })}
             </div>
@@ -718,7 +841,7 @@ export default function TenantProvisioningPage() {
                 className="inline-flex items-center gap-2 rounded-xl bg-teal-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-teal-400 disabled:opacity-50"
               >
                 <Pencil size={14} />
-                {editSaving ? "Saving..." : "Save Modules"}
+                {editSaving ? "Saving..." : "Save Modules & Features"}
               </button>
             </div>
           </div>

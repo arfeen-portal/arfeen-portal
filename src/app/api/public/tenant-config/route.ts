@@ -4,6 +4,12 @@ import {
   ARFEENPORTAL_DEMO_MODULES,
   portalModuleMapFromAllowed,
 } from "@/lib/tenantModules";
+import {
+  ARFEENPORTAL_DEMO_FEATURES,
+  buildFeatureMapFromAllowed,
+  buildFeatureMapFromRows,
+  featuresByModuleFromMap,
+} from "@/lib/tenantFeatures";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -42,17 +48,19 @@ export async function GET(req: NextRequest) {
 
   let tenantId = domainRow?.tenant_id ?? null;
   let allowedModules: string[] | null = null;
+  let allowedFeatures: string[] | null = null;
 
   if (!tenantId) {
     const { data: saasTenant } = await supabase
       .from("saas_tenants")
-      .select("id, allowed_modules, status, custom_domain")
+      .select("id, allowed_modules, allowed_features, status, custom_domain")
       .eq("custom_domain", domain)
       .maybeSingle();
 
     if (saasTenant?.id) {
       tenantId = saasTenant.id;
       allowedModules = saasTenant.allowed_modules || [];
+      allowedFeatures = saasTenant.allowed_features || [];
     }
   }
 
@@ -60,6 +68,10 @@ export async function GET(req: NextRequest) {
     const fallbackModules =
       domain === "arfeenportal.com"
         ? portalModuleMapFromAllowed(ARFEENPORTAL_DEMO_MODULES)
+        : {};
+    const fallbackFeatures =
+      domain === "arfeenportal.com"
+        ? buildFeatureMapFromAllowed(ARFEENPORTAL_DEMO_MODULES, [...ARFEENPORTAL_DEMO_FEATURES])
         : {};
 
     return NextResponse.json({
@@ -71,7 +83,10 @@ export async function GET(req: NextRequest) {
       supabaseProject,
       tenant: null,
       modules: fallbackModules,
+      features: fallbackFeatures,
+      features_by_module: featuresByModuleFromMap(fallbackFeatures),
       allowed_modules: domain === "arfeenportal.com" ? ARFEENPORTAL_DEMO_MODULES : [],
+      allowed_features: domain === "arfeenportal.com" ? ARFEENPORTAL_DEMO_FEATURES : [],
       settings: null,
     });
   }
@@ -79,6 +94,11 @@ export async function GET(req: NextRequest) {
   const { data: modules } = await supabase
     .from("portal_module_flags")
     .select("module_key, is_enabled")
+    .eq("tenant_id", tenantId);
+
+  const { data: featureRows } = await supabase
+    .from("portal_feature_flags")
+    .select("module_key, feature_key, is_enabled")
     .eq("tenant_id", tenantId);
 
   const { data: settings } = await supabase
@@ -92,20 +112,33 @@ export async function GET(req: NextRequest) {
     return acc;
   }, {});
 
+  let featureMap = buildFeatureMapFromRows(featureRows || []);
+
   if (!Object.keys(moduleMap).length && allowedModules?.length) {
     moduleMap = portalModuleMapFromAllowed(allowedModules);
   }
 
-  if (!Object.keys(moduleMap).length) {
+  if (!Object.keys(moduleMap).length || !Object.keys(featureMap).length) {
     const { data: saasTenant } = await supabase
       .from("saas_tenants")
-      .select("allowed_modules")
+      .select("allowed_modules, allowed_features")
       .eq("id", tenantId)
       .maybeSingle();
 
     if (saasTenant?.allowed_modules?.length) {
       allowedModules = saasTenant.allowed_modules;
       moduleMap = portalModuleMapFromAllowed(saasTenant.allowed_modules);
+    }
+
+    if (saasTenant?.allowed_features?.length) {
+      allowedFeatures = saasTenant.allowed_features;
+    }
+
+    if (!Object.keys(featureMap).length && saasTenant?.allowed_modules?.length) {
+      featureMap = buildFeatureMapFromAllowed(
+        saasTenant.allowed_modules,
+        saasTenant.allowed_features || []
+      );
     }
   }
 
@@ -117,7 +150,10 @@ export async function GET(req: NextRequest) {
     supabaseProject,
     tenant: domainRow || { tenant_id: tenantId, domain },
     modules: moduleMap,
+    features: featureMap,
+    features_by_module: featuresByModuleFromMap(featureMap),
     allowed_modules: allowedModules,
+    allowed_features: allowedFeatures,
     settings,
   });
 }

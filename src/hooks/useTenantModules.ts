@@ -1,18 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   isProvisioningModuleEnabled,
   portalModuleMapFromAllowed,
 } from "@/lib/tenantModules";
+import { resolveFeatureEnabled } from "@/lib/tenantFeatures";
 import { getTenantByHost, isMasterHost, type TenantModuleKey } from "@/lib/tenantConfig";
 
 type TenantModulesState = {
   loading: boolean;
   isMaster: boolean;
   moduleMap: Record<string, boolean>;
+  featureMap: Record<string, boolean>;
+  hasFeatureFlags: boolean;
   navModules: Record<TenantModuleKey, boolean>;
   isModuleEnabled: (moduleKey: string) => boolean;
+  isFeatureEnabled: (featureKey: string, moduleKey: string) => boolean;
   isSidebarSectionEnabled: (sectionLabel: string, sectionModuleKey?: string) => boolean;
 };
 
@@ -20,6 +24,8 @@ const emptyMap: Record<string, boolean> = {};
 
 export function useTenantModules(host?: string | null): TenantModulesState {
   const [moduleMap, setModuleMap] = useState<Record<string, boolean>>(emptyMap);
+  const [featureMap, setFeatureMap] = useState<Record<string, boolean>>(emptyMap);
+  const [hasFeatureFlags, setHasFeatureFlags] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const resolvedHost =
@@ -35,6 +41,8 @@ export function useTenantModules(host?: string | null): TenantModulesState {
       if (isMaster) {
         if (mounted) {
           setModuleMap(emptyMap);
+          setFeatureMap(emptyMap);
+          setHasFeatureFlags(false);
           setLoading(false);
         }
         return;
@@ -55,9 +63,19 @@ export function useTenantModules(host?: string | null): TenantModulesState {
         } else {
           setModuleMap(emptyMap);
         }
+
+        if (json?.features && Object.keys(json.features).length > 0) {
+          setFeatureMap(json.features);
+          setHasFeatureFlags(true);
+        } else {
+          setFeatureMap(emptyMap);
+          setHasFeatureFlags(false);
+        }
       } catch {
         if (mounted) {
           setModuleMap(emptyMap);
+          setFeatureMap(emptyMap);
+          setHasFeatureFlags(false);
         }
       } finally {
         if (mounted) {
@@ -100,29 +118,51 @@ export function useTenantModules(host?: string | null): TenantModulesState {
     [moduleMap]
   );
 
-  const isModuleEnabled = (moduleKey: string) => {
-    if (isMaster) return true;
-    return isProvisioningModuleEnabled(enabledModuleSet, moduleKey);
-  };
+  const isModuleEnabled = useCallback(
+    (moduleKey: string) => {
+      if (isMaster) return true;
+      return isProvisioningModuleEnabled(enabledModuleSet, moduleKey);
+    },
+    [isMaster, enabledModuleSet]
+  );
 
-  const isSidebarSectionEnabled = (sectionLabel: string, sectionModuleKey?: string) => {
-    if (isMaster) return true;
+  const isFeatureEnabled = useCallback(
+    (featureKey: string, moduleKey: string) => {
+      return resolveFeatureEnabled({
+        isMaster,
+        hasFeatureFlags,
+        moduleEnabled: isModuleEnabled(moduleKey),
+        featureKey,
+        featureMap,
+      });
+    },
+    [isMaster, hasFeatureFlags, featureMap, isModuleEnabled]
+  );
 
-    const key = sectionModuleKey || sectionLabel.toLowerCase().replace(/\s+/g, "_");
+  const isSidebarSectionEnabled = useCallback(
+    (sectionLabel: string, sectionModuleKey?: string) => {
+      if (isMaster) return true;
 
-    if (sectionLabel === "Branding") {
-      return isModuleEnabled("branding") || isModuleEnabled("white_label");
-    }
+      const key = sectionModuleKey || sectionLabel.toLowerCase().replace(/\s+/g, "_");
 
-    return isModuleEnabled(key);
-  };
+      if (sectionLabel === "Branding") {
+        return isModuleEnabled("branding") || isModuleEnabled("white_label");
+      }
+
+      return isModuleEnabled(key);
+    },
+    [isMaster, isModuleEnabled]
+  );
 
   return {
     loading,
     isMaster,
     moduleMap,
+    featureMap,
+    hasFeatureFlags,
     navModules,
     isModuleEnabled,
+    isFeatureEnabled,
     isSidebarSectionEnabled,
   };
 }

@@ -24,7 +24,7 @@ import { useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { clientLogout } from "@/lib/auth/clientLogout";
 import { useTenantModules } from "@/hooks/useTenantModules";
-import { SIDEBAR_SECTION_MODULE, isProvisioningModuleEnabled } from "@/lib/tenantModules";
+import { getFeatureByHref, getFeatureForMenuItem } from "@/lib/tenantFeatures";
 
 type MenuItem = {
   label: string;
@@ -102,6 +102,8 @@ const menu: MenuItem[] = [
       { label: "AI Logs", href: "/admin/hotels/kuraki/ai-logs" },
       { label: "Reports", href: "/admin/hotels/kuraki/reports" },
       { label: "Hotel RFQ Command Center", href: "/admin/hotels/offline-demands" },
+      { label: "Offline Hotel Request", href: "/hotels/offline-demands/new" },
+      { label: "Agent Hotel Requests", href: "/agent/hotels" },
     ],
   },
 
@@ -233,23 +235,37 @@ function isPathActive(pathname: string, href: string) {
 
 export default function AppSidebar({ host }: { host?: string | null }) {
   const pathname = usePathname();
-  const { isMaster, moduleMap } = useTenantModules(host);
+  const { isMaster, isFeatureEnabled } = useTenantModules(host);
 
   const visibleMenu = useMemo(() => {
     if (isMaster) return menu;
 
-    const enabledModuleSet = new Set(
-      Object.entries(moduleMap)
-        .filter(([, enabled]) => enabled)
-        .map(([key]) => key)
-    );
+    return menu
+      .map((item) => {
+        if (item.href) {
+          const feature = getFeatureByHref(item.href);
+          if (feature && !isFeatureEnabled(feature.feature_key, feature.module_key)) {
+            return null;
+          }
+          return item;
+        }
 
-    return menu.filter((item) => {
-      const moduleKey = SIDEBAR_SECTION_MODULE[item.label];
-      if (!moduleKey) return true;
-      return isProvisioningModuleEnabled(enabledModuleSet, moduleKey);
-    });
-  }, [isMaster, moduleMap]);
+        const children = (item.children || []).filter((child) => {
+          const feature =
+            getFeatureForMenuItem(child.label, child.href) || getFeatureByHref(child.href);
+          if (!feature) return true;
+          return isFeatureEnabled(feature.feature_key, feature.module_key);
+        });
+
+        if (!children.length) return null;
+
+        return {
+          ...item,
+          children,
+        };
+      })
+      .filter((item): item is MenuItem => item !== null);
+  }, [isMaster, isFeatureEnabled]);
 
   async function handleSignOut() {
     await clientLogout();
